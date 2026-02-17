@@ -133,25 +133,51 @@ export class PaymentsService {
       parseFloat(this.configService.get<string>('PLATFORM_FEE_PERCENTAGE') ?? '0') || 0;
     const { platformFee, hostNet } = calculatePlatformFee(totalAmount, feePercentage);
 
-    const updatedPayment = await this.prisma.payment.update({
-      where: { bookingId },
-      data: {
-        status: 'COMPLETED',
-        paidAt: new Date(),
-        platformFeeAmount: platformFee,
-        hostNetAmount: hostNet,
-      },
+    const now = new Date();
+    const transitioned = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.payment.updateMany({
+        where: {
+          id: payment.id,
+          status: 'PENDING',
+        },
+        data: {
+          status: 'COMPLETED',
+          paidAt: now,
+          platformFeeAmount: platformFee,
+          hostNetAmount: hostNet,
+        },
+      });
+
+      if (result.count === 0) {
+        return null;
+      }
+
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: 'CONFIRMED' },
+      });
+
+      return tx.payment.findUnique({ where: { bookingId } });
     });
 
-    await this.prisma.booking.update({
-      where: { id: bookingId },
-      data: { status: 'CONFIRMED' },
-    });
+    if (!transitioned) {
+      const current = await this.prisma.payment.findUnique({ where: { bookingId } });
+      if (!current) throw new NotFoundException('Payment not found');
+
+      return {
+        ...current,
+        paymentBreakdown: {
+          totalAmount: Number(current.amount),
+          platformFee: Number(current.platformFeeAmount ?? 0),
+          hostNetAmount: Number(current.hostNetAmount ?? current.amount),
+        },
+      };
+    }
 
     await this.redis.del(holdKey(bookingId));
 
     return {
-      ...updatedPayment,
+      ...transitioned,
       paymentBreakdown: {
         totalAmount: Number(totalAmount),
         platformFee: Number(platformFee),
@@ -303,16 +329,19 @@ export class PaymentsService {
 
     if (!payment) return;
 
-    // Idempotencia: si ya procesado (confirm() o webhook previo), no hacer nada.
-    if (payment.status === 'COMPLETED') return;
+    // Solo procesar la transición esperada PENDING -> COMPLETED.
+    if (payment.status !== 'PENDING') return;
 
-    // No recalcular si la comisión ya fue calculada (ej: confirm() procesó antes que el webhook).
-    // Si platformFeeAmount existe, confirm() ya actualizó todo; solo sincronizar booking/redis.
-    if (payment.platformFeeAmount != null) {
-      await this.prisma.payment.update({
-        where: { id: payment.id },
+    // Si por alguna razón ya existe snapshot contable, no recalcular montos.
+    // Esto preserva el fee histórico aunque el webhook llegue tarde o reintentado.
+    if (payment.platformFeeAmount != null && payment.hostNetAmount != null) {
+      const synced = await this.prisma.payment.updateMany({
+        where: { id: payment.id, status: 'PENDING' },
         data: { status: 'COMPLETED', paidAt: new Date() },
       });
+
+      if (synced.count === 0) return;
+
       await this.prisma.booking.update({
         where: { id: payment.bookingId },
         data: { status: 'CONFIRMED' },
@@ -327,20 +356,33 @@ export class PaymentsService {
       parseFloat(this.configService.get<string>('PLATFORM_FEE_PERCENTAGE') ?? '0') || 0;
     const { platformFee, hostNet } = calculatePlatformFee(totalAmount, feePercentage);
 
-    await this.prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        status: 'COMPLETED',
-        paidAt: new Date(),
-        platformFeeAmount: platformFee,
-        hostNetAmount: hostNet,
-      },
+    const transitioned = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.payment.updateMany({
+        where: {
+          id: payment.id,
+          status: 'PENDING',
+        },
+        data: {
+          status: 'COMPLETED',
+          paidAt: new Date(),
+          platformFeeAmount: platformFee,
+          hostNetAmount: hostNet,
+        },
+      });
+
+      if (result.count === 0) {
+        return false;
+      }
+
+      await tx.booking.update({
+        where: { id: payment.bookingId },
+        data: { status: 'CONFIRMED' },
+      });
+
+      return true;
     });
 
-    await this.prisma.booking.update({
-      where: { id: payment.bookingId },
-      data: { status: 'CONFIRMED' },
-    });
+    if (!transitioned) return;
 
     await this.redis.del(holdKey(payment.bookingId));
   }
