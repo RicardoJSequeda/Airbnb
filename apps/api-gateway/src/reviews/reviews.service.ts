@@ -12,10 +12,16 @@ import { UpdateReviewDto } from './dto/update-review.dto';
 export class ReviewsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createReviewDto: CreateReviewDto, userId: string, organizationId: string | null) {
+  async create(
+    createReviewDto: CreateReviewDto,
+    userId: string,
+    organizationId: string | null,
+  ) {
     const { bookingId, rating, comment } = createReviewDto;
 
-    const bookingWhere: { id: string; organizationId?: string } = { id: bookingId };
+    const bookingWhere: { id: string; organizationId?: string } = {
+      id: bookingId,
+    };
     if (organizationId) bookingWhere.organizationId = organizationId;
 
     const booking = await this.prisma.booking.findFirst({
@@ -85,7 +91,9 @@ export class ReviewsService {
   }
 
   async findByProperty(propertyId: string, organizationId?: string | null) {
-    const propertyWhere: { id: string; organizationId?: string } = { id: propertyId };
+    const propertyWhere: { id: string; organizationId?: string } = {
+      id: propertyId,
+    };
     if (organizationId) propertyWhere.organizationId = organizationId;
 
     const property = await this.prisma.property.findFirst({
@@ -112,7 +120,8 @@ export class ReviewsService {
     // Calcular rating promedio
     const averageRating =
       reviews.length > 0
-        ? reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
+        ? reviews.reduce((acc, review) => acc + review.rating, 0) /
+          reviews.length
         : 0;
 
     return {
@@ -195,7 +204,12 @@ export class ReviewsService {
     return review;
   }
 
-  async update(id: string, updateReviewDto: UpdateReviewDto, userId: string, organizationId?: string | null) {
+  async update(
+    id: string,
+    updateReviewDto: UpdateReviewDto,
+    userId: string,
+    organizationId?: string | null,
+  ) {
     const baseWhere: any = { id, guestId: userId };
     if (organizationId) baseWhere.booking = { organizationId };
 
@@ -215,7 +229,9 @@ export class ReviewsService {
     );
 
     if (daysSinceCreation > 7) {
-      throw new BadRequestException('Reviews can only be updated within 7 days');
+      throw new BadRequestException(
+        'Reviews can only be updated within 7 days',
+      );
     }
 
     const updated = await this.prisma.review.update({
@@ -259,7 +275,8 @@ export class ReviewsService {
       throw new NotFoundException('Review not found');
     }
 
-    const guestOrHost = review.guestId === userId || review.property.hostId === userId;
+    const guestOrHost =
+      review.guestId === userId || review.property.hostId === userId;
     if (!guestOrHost) {
       throw new ForbiddenException('You can only delete your own reviews');
     }

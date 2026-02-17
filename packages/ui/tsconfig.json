@@ -1,5 +1,5 @@
 {
-  "extends": "@repo/typescript-config/react-library.json",
+  "extends": "@airbnb-clone/typescript-config/react-library.json",
   "compilerOptions": {
     "outDir": "dist"
   },

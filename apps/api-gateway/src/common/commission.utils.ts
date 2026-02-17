@@ -12,13 +12,18 @@ export function calculatePlatformFee(
   totalAmount: Prisma.Decimal | number,
   feePercentage: number,
 ): { platformFee: Prisma.Decimal; hostNet: Prisma.Decimal } {
-  const total = totalAmount instanceof Prisma.Decimal
-    ? totalAmount
-    : new Prisma.Decimal(totalAmount);
+  const total =
+    totalAmount instanceof Prisma.Decimal
+      ? totalAmount
+      : new Prisma.Decimal(totalAmount);
 
   const pct = new Prisma.Decimal(feePercentage).div(100);
-  const platformFee = total.mul(pct).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
-  const hostNet = total.minus(platformFee).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+  const platformFee = total
+    .mul(pct)
+    .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+  const hostNet = total
+    .minus(platformFee)
+    .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
 
   return { platformFee, hostNet };
 }

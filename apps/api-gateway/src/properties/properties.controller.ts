@@ -15,9 +15,10 @@ import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { OrganizationGuard } from '../common/guards/organization.guard';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
 
 @Controller('dashboard/properties')
-@UseGuards(SupabaseAuthGuard, OrganizationGuard)
+@UseGuards(SupabaseAuthGuard, OrganizationGuard, SubscriptionGuard)
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
@@ -26,7 +27,7 @@ export class PropertiesController {
     return this.propertiesService.create(
       createPropertyDto,
       req.user.userId,
-      req.user.organizationId!,
+      req.user.organizationId,
     );
   }
 
@@ -46,7 +47,10 @@ export class PropertiesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @Request() req: { user?: { organizationId?: string | null } }) {
+  findOne(
+    @Param('id') id: string,
+    @Request() req: { user?: { organizationId?: string | null } },
+  ) {
     return this.propertiesService.findOne(id, req.user?.organizationId ?? null);
   }
 
@@ -56,16 +60,29 @@ export class PropertiesController {
     @Body() updatePropertyDto: UpdatePropertyDto,
     @Request() req,
   ) {
-    return this.propertiesService.update(id, updatePropertyDto, req.user.userId, req.user.organizationId);
+    return this.propertiesService.update(
+      id,
+      updatePropertyDto,
+      req.user.userId,
+      req.user.organizationId,
+    );
   }
 
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req) {
-    return this.propertiesService.remove(id, req.user.userId, req.user.organizationId);
+    return this.propertiesService.remove(
+      id,
+      req.user.userId,
+      req.user.organizationId,
+    );
   }
 
   @Patch(':id/publish')
   publish(@Param('id') id: string, @Request() req) {
-    return this.propertiesService.publish(id, req.user.userId, req.user.organizationId);
+    return this.propertiesService.publish(
+      id,
+      req.user.userId,
+      req.user.organizationId,
+    );
   }
 }

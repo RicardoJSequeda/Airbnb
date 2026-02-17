@@ -51,45 +51,66 @@ async function main() {
     update: { organizationId: org.id },
   });
 
-  // 5. Dos propiedades demo
+  // 5. Propiedades demo con imágenes reales (Unsplash) y datos profesionales
   const propsData = [
     {
-      title: 'Beautiful Beach House',
-      description: 'Amazing ocean view with private beach access',
-      price: 250.0,
+      title: 'Casa frente al mar en Miami Beach',
+      description:
+        'Villa de lujo con vistas panorámicas al océano, acceso directo a la playa privada y piscina infinita. Diseño contemporáneo con amplios ventanales, terraza con zona de barbacoa y zonas de descanso al aire libre. Ideal para familias o grupos que buscan una escapada inolvidable en la costa de Florida.',
+      price: 320.0,
       maxGuests: 6,
       bedrooms: 3,
       bathrooms: 2,
       propertyType: 'HOUSE',
-      address: '123 Beach Road',
-      city: 'Miami',
+      address: '123 Ocean Drive',
+      city: 'Miami Beach',
       state: 'FL',
-      country: 'USA',
+      country: 'Estados Unidos',
       zipCode: '33139',
       latitude: 25.7617,
       longitude: -80.1918,
-      amenities: ['WiFi', 'Pool', 'Beach Access', 'BBQ'],
-      images: ['beach1.jpg', 'beach2.jpg', 'beach3.jpg'],
+      amenities: ['WiFi de alta velocidad', 'Piscina', 'Acceso a playa privada', 'Barbacoa', 'Aire acondicionado', 'Cocina equipada', 'Estacionamiento'],
+      images: [
+        'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800',
+        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
+        'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=800',
+        'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=800',
+      ],
     },
     {
-      title: 'Cozy Mountain Cabin',
-      description: 'Rustic cabin with fireplace and mountain views',
-      price: 180.0,
+      title: 'Cabaña de montaña con vistas a las Rocosas',
+      description:
+        'Encantadora cabaña de madera en las montañas de Colorado, con chimenea de piedra y vistas impresionantes a las cumbres nevadas. Ambiente acogedor perfecto para desconectar. Incluye cocina completa, sala de estar con grandes ventanales y terraza para contemplar las estrellas. A minutos de rutas de senderismo y esquí.',
+      price: 195.0,
       maxGuests: 4,
       bedrooms: 2,
       bathrooms: 1,
       propertyType: 'CABIN',
-      address: '456 Forest Trail',
+      address: '456 Pine Ridge Road',
       city: 'Denver',
       state: 'CO',
-      country: 'USA',
+      country: 'Estados Unidos',
       zipCode: '80201',
       latitude: 39.7392,
       longitude: -104.9903,
-      amenities: ['WiFi', 'Fireplace', 'Kitchen', 'Parking'],
-      images: ['cabin1.jpg', 'cabin2.jpg'],
+      amenities: ['WiFi', 'Chimenea', 'Cocina equipada', 'Estacionamiento', 'Calefacción', 'Terraza'],
+      images: [
+        'https://images.unsplash.com/photo-1542718610-a1d656d1884a?w=800',
+        'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800',
+        'https://images.unsplash.com/photo-1518789248391-509a9a91ef46?w=800',
+        'https://images.unsplash.com/photo-1524660988542-c440de9c0fde?w=800',
+      ],
     },
   ];
+
+  // Eliminar propiedades demo antiguas (títulos previos) para reemplazar con datos mejorados
+  await prisma.property.deleteMany({
+    where: {
+      organizationId: org.id,
+      hostId: host.id,
+      title: { in: ['Beautiful Beach House', 'Cozy Mountain Cabin'] },
+    },
+  });
 
   for (const p of propsData) {
     const existing = await prisma.property.findFirst({

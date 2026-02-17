@@ -28,7 +28,11 @@ export class BookingsService {
     private configService: ConfigService,
   ) {}
 
-  async create(createBookingDto: CreateBookingDto, guestId: string, organizationId: string) {
+  async create(
+    createBookingDto: CreateBookingDto,
+    guestId: string,
+    organizationId: string,
+  ) {
     const { propertyId, checkIn, checkOut, guests } = createBookingDto;
 
     const checkInDate = new Date(checkIn);
@@ -81,8 +85,7 @@ export class BookingsService {
     }
 
     const nights = Math.ceil(
-      (checkOutDate.getTime() - checkInDate.getTime()) /
-        (1000 * 60 * 60 * 24),
+      (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24),
     );
     const totalPrice = Number(property.price) * nights;
 
@@ -350,7 +353,10 @@ export class BookingsService {
   }
 
   async confirm(id: string, hostId: string, organizationId?: string | null) {
-    const where: { id: string; property: { hostId: string; organizationId?: string } } = {
+    const where: {
+      id: string;
+      property: { hostId: string; organizationId?: string };
+    } = {
       id,
       property: { hostId },
     };
@@ -377,24 +383,30 @@ export class BookingsService {
       throw new BadRequestException('Payment intent not found');
     }
 
-    const paymentIntent =
-      await this.stripeService.retrievePaymentIntent(
-        payment.stripePaymentIntentId,
-      );
+    const paymentIntent = await this.stripeService.retrievePaymentIntent(
+      payment.stripePaymentIntentId,
+    );
     if (paymentIntent.status !== 'requires_capture') {
       throw new BadRequestException(
         'Guest must authorize payment before host can confirm',
       );
     }
 
-    await this.stripeService.capturePaymentIntent(payment.stripePaymentIntentId);
+    await this.stripeService.capturePaymentIntent(
+      payment.stripePaymentIntentId,
+    );
 
     // Calcular comisión solo en transición PENDING -> COMPLETED. Usamos Prisma.Decimal para
     // precisión (evita errores de punto flotante). El cálculo es atómico con el update.
     const totalAmount = booking.totalPrice;
     const feePercentage =
-      parseFloat(this.configService.get<string>('PLATFORM_FEE_PERCENTAGE') ?? '0') || 0;
-    const { platformFee, hostNet } = calculatePlatformFee(totalAmount, feePercentage);
+      parseFloat(
+        this.configService.get<string>('PLATFORM_FEE_PERCENTAGE') ?? '0',
+      ) || 0;
+    const { platformFee, hostNet } = calculatePlatformFee(
+      totalAmount,
+      feePercentage,
+    );
 
     await this.prisma.payment.update({
       where: { bookingId: id },
@@ -424,7 +436,10 @@ export class BookingsService {
   }
 
   async reject(id: string, hostId: string, organizationId?: string | null) {
-    const where: { id: string; property: { hostId: string; organizationId?: string } } = {
+    const where: {
+      id: string;
+      property: { hostId: string; organizationId?: string };
+    } = {
       id,
       property: { hostId },
     };

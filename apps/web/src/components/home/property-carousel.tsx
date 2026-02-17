@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import PropertyCard from "./property-card";
 
-export interface Property {
+/** Formato para tarjeta en carousel (mapeado desde API Property) */
+export interface PropertyCardDisplay {
   id: string;
   title: string;
   location: string;
@@ -18,7 +19,7 @@ export interface Property {
 }
 
 interface PropertyCarouselProps {
-  properties: Property[];
+  properties: PropertyCardDisplay[];
   title?: string;
 }
 

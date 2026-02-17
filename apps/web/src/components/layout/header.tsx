@@ -1,12 +1,16 @@
 'use client'
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Globe, Menu, Search } from "lucide-react";
 import Logo from "../shared/logo";
 import SearchBar from "./searchBar";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 const Header = () => {
+    const { isAuthenticated, user, logout } = useAuthStore();
     const [isScrolled, setIsScrolled] = useState(false);
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [activeTab, setActiveTab] = useState("Alojamientos");
     const [initialSearchSection, setInitialSearchSection] = useState<'destination' | 'dates' | 'guests' | null>(null);
@@ -128,12 +132,42 @@ const Header = () => {
                             <Globe className="w-5 h-5 text-gray-700" />
                         </button>
                         
-                        <button className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-full hover:shadow-md transition-all duration-200 cursor-pointer">
-                            <Menu className="w-4 h-4 text-gray-700" />
-                            <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
-                                <span className="text-white text-sm font-medium">G</span>
+                        {isAuthenticated ? (
+                            <div className="relative">
+                                <Link href="/my-bookings" className="hidden md:block text-sm font-medium px-4 py-2.5 rounded-full hover:bg-gray-100 transition-all duration-200 mr-2">
+                                    Mis reservas
+                                </Link>
+                                <button
+                                    onClick={() => setUserMenuOpen((v) => !v)}
+                                    className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-full hover:shadow-md transition-all duration-200 cursor-pointer"
+                                >
+                                    <Menu className="w-4 h-4 text-gray-700" />
+                                    <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
+                                        <span className="text-white text-sm font-medium">{user?.name?.[0]?.toUpperCase() || 'U'}</span>
+                                    </div>
+                                </button>
+                                {userMenuOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} aria-hidden />
+                                        <div className="absolute right-0 top-full mt-1 py-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[160px]">
+                                            <Link href="/my-bookings" className="block px-4 py-2 text-sm hover:bg-gray-50" onClick={() => setUserMenuOpen(false)}>Mis reservas</Link>
+                                            <button type="button" onClick={() => { logout(); setUserMenuOpen(false); }} className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600">
+                                                Cerrar sesión
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
-                        </button>
+                        ) : (
+                            <>
+                                <Link href="/login" className="text-sm font-medium px-4 py-2.5 rounded-full hover:bg-gray-100 transition-all duration-200">
+                                    Iniciar sesión
+                                </Link>
+                                <Link href="/register" className="text-sm font-medium px-4 py-2.5 rounded-full bg-primary text-white hover:bg-primary/90 transition-all duration-200">
+                                    Regístrate
+                                </Link>
+                            </>
+                        )}
                     </div>
                 </nav>
                 

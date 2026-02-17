@@ -10,9 +10,10 @@ import {
 import { FavoritesService } from './favorites.service';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { OrganizationGuard } from '../common/guards/organization.guard';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
 
 @Controller('favorites')
-@UseGuards(SupabaseAuthGuard, OrganizationGuard)
+@UseGuards(SupabaseAuthGuard, OrganizationGuard, SubscriptionGuard)
 export class FavoritesController {
   constructor(private readonly favoritesService: FavoritesService) {}
 

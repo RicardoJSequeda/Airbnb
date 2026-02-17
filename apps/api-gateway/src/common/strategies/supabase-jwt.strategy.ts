@@ -7,7 +7,10 @@ import { PrismaService } from '../prisma.service';
 import { UserRole } from '@prisma/client';
 
 @Injectable()
-export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jwt') {
+export class SupabaseJwtStrategy extends PassportStrategy(
+  Strategy,
+  'supabase-jwt',
+) {
   constructor(
     private configService: ConfigService,
     private prisma: PrismaService,

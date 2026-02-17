@@ -10,7 +10,11 @@ import { PrismaService } from '../common/prisma.service';
 export class FavoritesService {
   constructor(private prisma: PrismaService) {}
 
-  async addFavorite(propertyId: string, userId: string, organizationId?: string | null) {
+  async addFavorite(
+    propertyId: string,
+    userId: string,
+    organizationId?: string | null,
+  ) {
     const where: any = { id: propertyId };
     if (organizationId) where.organizationId = organizationId;
 
@@ -60,7 +64,11 @@ export class FavoritesService {
     };
   }
 
-  async removeFavorite(propertyId: string, userId: string, organizationId?: string | null) {
+  async removeFavorite(
+    propertyId: string,
+    userId: string,
+    organizationId?: string | null,
+  ) {
     const where: any = { userId, propertyId };
     if (organizationId) where.property = { organizationId };
 
@@ -76,7 +84,11 @@ export class FavoritesService {
     return { message: 'Removed from favorites' };
   }
 
-  async toggleFavorite(propertyId: string, userId: string, organizationId?: string | null) {
+  async toggleFavorite(
+    propertyId: string,
+    userId: string,
+    organizationId?: string | null,
+  ) {
     const where: any = { id: propertyId };
     if (organizationId) where.organizationId = organizationId;
 
@@ -162,7 +174,11 @@ export class FavoritesService {
     }));
   }
 
-  async checkIsFavorite(propertyId: string, userId: string, organizationId?: string | null) {
+  async checkIsFavorite(
+    propertyId: string,
+    userId: string,
+    organizationId?: string | null,
+  ) {
     const where: any = { userId, propertyId };
     if (organizationId) where.property = { organizationId };
 
