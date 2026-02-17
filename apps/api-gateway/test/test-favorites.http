@@ -1,0 +1,27 @@
+@baseUrl = http://localhost:3001/api
+@tokenGuest = TU_TOKEN_DE_GUEST
+@propertyId = TU_PROPERTY_ID
+
+### 1. Agregar a favoritos
+# @name addFavorite
+POST {{baseUrl}}/favorites/{{propertyId}}
+Authorization: Bearer {{tokenGuest}}
+
+### 2. Ver mis favoritos
+GET {{baseUrl}}/favorites
+Authorization: Bearer {{tokenGuest}}
+
+### 3. Verificar si está en favoritos
+GET {{baseUrl}}/favorites/check/{{propertyId}}
+Authorization: Bearer {{tokenGuest}}
+
+### 4. Ver contador de favoritos (público)
+GET {{baseUrl}}/favorites/count/{{propertyId}}
+
+### 5. Toggle favorito (agregar/quitar)
+POST {{baseUrl}}/favorites/toggle/{{propertyId}}
+Authorization: Bearer {{tokenGuest}}
+
+### 6. Remover de favoritos
+DELETE {{baseUrl}}/favorites/{{propertyId}}
+Authorization: Bearer {{tokenGuest}}

@@ -1,0 +1,23 @@
+@baseUrl = http://localhost:3001/api
+@tokenGuest = {{loginGuest.response.body.token}}
+@tokenHost = {{loginHost.response.body.token}}
+@bookingId = TU_BOOKING_ID_AQUI
+
+### 1. Crear Payment Intent
+# @name createPayment
+POST {{baseUrl}}/payments/create-intent
+Authorization: Bearer {{tokenGuest}}
+Content-Type: application/json
+
+{
+  "bookingId": "{{bookingId}}"
+}
+
+### 2. Obtener pago de una reserva
+GET {{baseUrl}}/payments/booking/{{bookingId}}
+Authorization: Bearer {{tokenGuest}}
+
+### 3. Reembolsar pago (solo host)
+@paymentId = {{createPayment.response.body.payment.id}}
+POST {{baseUrl}}/payments/{{paymentId}}/refund
+Authorization: Bearer {{tokenHost}}

@@ -1,0 +1,40 @@
+@baseUrl = http://localhost:3001/api
+@tokenGuest = TU_TOKEN_DE_GUEST_AQUI
+@tokenHost = TU_TOKEN_DE_HOST_AQUI
+
+### 0. Listar propiedades para obtener un ID
+GET {{baseUrl}}/properties
+
+### 1. Crear una reserva (como GUEST)
+# @name createBooking
+POST {{baseUrl}}/bookings
+Authorization: Bearer {{tokenGuest}}
+Content-Type: application/json
+
+{
+  "propertyId": "cmkkc2xyz...",
+  "checkIn": "2026-02-01",
+  "checkOut": "2026-02-05",
+  "guests": 2
+}
+
+### 2. Ver mis reservas (como guest)
+GET {{baseUrl}}/bookings/my-bookings
+Authorization: Bearer {{tokenGuest}}
+
+### 3. Ver reservas de mis propiedades (como host)
+GET {{baseUrl}}/bookings/host-bookings
+Authorization: Bearer {{tokenHost}}
+
+### 4. Ver detalle de una reserva
+@bookingId = {{createBooking.response.body.id}}
+GET {{baseUrl}}/bookings/{{bookingId}}
+Authorization: Bearer {{tokenGuest}}
+
+### 5. Confirmar reserva (solo host)
+PATCH {{baseUrl}}/bookings/{{bookingId}}/confirm
+Authorization: Bearer {{tokenHost}}
+
+### 6. Cancelar reserva
+PATCH {{baseUrl}}/bookings/{{bookingId}}/cancel
+Authorization: Bearer {{tokenGuest}}

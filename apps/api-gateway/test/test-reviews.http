@@ -1,0 +1,41 @@
+@baseUrl = http://localhost:3001/api
+@tokenGuest = TU_TOKEN_DE_GUEST
+@bookingId = TU_BOOKING_ID_COMPLETADO
+@propertyId = TU_PROPERTY_ID
+
+### 1. Crear reseña (después de checkout)
+# @name createReview
+POST {{baseUrl}}/reviews
+Authorization: Bearer {{tokenGuest}}
+Content-Type: application/json
+
+{
+  "bookingId": "{{bookingId}}",
+  "rating": 5,
+  "comment": "Amazing place! Very clean and comfortable. The host was super helpful."
+}
+
+### 2. Ver reseñas de una propiedad
+GET {{baseUrl}}/reviews/property/{{propertyId}}
+
+### 3. Ver mis reseñas
+GET {{baseUrl}}/reviews/my-reviews
+Authorization: Bearer {{tokenGuest}}
+
+### 4. Ver detalle de una reseña
+@reviewId = {{createReview.response.body.id}}
+GET {{baseUrl}}/reviews/{{reviewId}}
+
+### 5. Actualizar reseña (dentro de 7 días)
+PATCH {{baseUrl}}/reviews/{{reviewId}}
+Authorization: Bearer {{tokenGuest}}
+Content-Type: application/json
+
+{
+  "rating": 4,
+  "comment": "Updated: Still great, but AC could be better."
+}
+
+### 6. Eliminar reseña
+DELETE {{baseUrl}}/reviews/{{reviewId}}
+Authorization: Bearer {{tokenGuest}}

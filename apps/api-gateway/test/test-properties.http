@@ -1,0 +1,58 @@
+@baseUrl = http://localhost:3001/api
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbWtrYzA2cHMwMDAweXZqb3F4czQ5NjBnIiwiZW1haWwiOiJuZXd1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzY4Nzc2Nzc5LCJleHAiOjE3NjkzODE1Nzl9.ak6eORh2neBqj1IEmgNkiFLbk---z-lsif6yuCQ0jWU
+
+### 1. Listar todas las propiedades (público)
+GET {{baseUrl}}/properties
+
+### 2. Crear propiedad (requiere ser HOST)
+# @name createProperty
+POST {{baseUrl}}/properties
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Beautiful Beach House",
+  "description": "Amazing ocean view with private beach access",
+  "price": 250,
+  "maxGuests": 6,
+  "bedrooms": 3,
+  "bathrooms": 2,
+  "propertyType": "HOUSE",
+  "address": "123 Beach Road",
+  "city": "Miami",
+  "state": "FL",
+  "country": "USA",
+  "zipCode": "33139",
+  "latitude": 25.7617,
+  "longitude": -80.1918,
+  "amenities": ["WiFi", "Pool", "Beach Access", "BBQ"],
+  "images": ["beach1.jpg", "beach2.jpg", "beach3.jpg"]
+}
+
+### 3. Obtener detalle de la propiedad creada
+@propertyId = {{createProperty.response.body.id}}
+GET {{baseUrl}}/properties/{{propertyId}}
+
+### 4. Publicar la propiedad
+PATCH {{baseUrl}}/properties/{{propertyId}}/publish
+Authorization: Bearer {{token}}
+
+### 5. Listar propiedades publicadas
+GET {{baseUrl}}/properties
+
+### 6. Buscar por ciudad
+GET {{baseUrl}}/properties?city=Miami
+
+### 7. Actualizar propiedad
+PATCH {{baseUrl}}/properties/{{propertyId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Luxury Beach House - Updated",
+  "price": 300
+}
+
+### 8. Eliminar propiedad (descomentar cuando quieras probar)
+# DELETE {{baseUrl}}/properties/{{propertyId}}
+# Authorization: Bearer {{token}}

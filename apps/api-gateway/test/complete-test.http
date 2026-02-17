@@ -1,0 +1,279 @@
+@baseUrl = http://localhost:3001/api
+
+
+# ⚠️ PEGAR LOS TOKENS AQUÍ DESPUÉS DE HACER LOGIN
+@tokenGuest = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imd1ZXN0QHRlc3QuY29tIiwic3ViIjoiY21rbGloY3U2MDAwMHhmaTdpdnQxcjcxYyIsImlhdCI6MTc2ODg1OTY0MywiZXhwIjoxNzY5NDY0NDQzfQ.FqRTYsJuQ5myB0GIQtveIfmx4q7qL87xLeuPGANrV_g
+@tokenHost = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imhvc3RAdGVzdC5jb20iLCJzdWIiOiJjbWtsaWhmN2EwMDAxeGZpNzc2bmNmNHAyIiwiaWF0IjoxNzY4ODU5NjU0LCJleHAiOjE3Njk0NjQ0NTR9.c7ZSdb4kcyqdEE6e9Rv0jmg6SJtal4X-5T_49rsGSnk
+
+# También pegar los IDs manualmente después de crear
+@propertyId = 
+@bookingId = 
+@reviewId = 
+
+
+### ========================================
+### 1. REGISTRO DE USUARIOS
+### ========================================
+
+### Registrar Guest
+# @name registerGuest
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "guest@test.com",
+  "password": "password123",
+  "name": "John Guest"
+}
+
+###
+
+### Registrar Host
+# @name registerHost
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "host@test.com",
+  "password": "password123",
+  "name": "Jane Host"
+}
+
+###
+
+### ========================================
+### 2. LOGIN
+### ========================================
+
+### Login Guest
+# @name loginGuest
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "guest@test.com",
+  "password": "password123"
+}
+
+###
+
+### Login Host
+# @name loginHost
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "host@test.com",
+  "password": "password123"
+}
+
+###
+
+@tokenGuest = {{loginGuest.response.body.token}}
+@tokenHost = {{loginHost.response.body.token}}
+
+### ========================================
+### 3. VERIFICAR PERFIL
+### ========================================
+
+### Ver perfil Guest
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{tokenGuest}}
+
+###
+
+### Ver perfil Host
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{tokenHost}}
+
+###
+
+### ========================================
+### 4. CREAR PROPIEDAD (como Host)
+### ========================================
+
+### Crear propiedad
+# @name createProperty
+POST {{baseUrl}}/properties
+Authorization: Bearer {{tokenHost}}
+Content-Type: application/json
+
+{
+  "title": "Beautiful Beach House",
+  "description": "Amazing ocean view with private beach access",
+  "price": 250,
+  "maxGuests": 6,
+  "bedrooms": 3,
+  "bathrooms": 2,
+  "propertyType": "HOUSE",
+  "address": "123 Beach Road",
+  "city": "Miami",
+  "state": "FL",
+  "country": "USA",
+  "zipCode": "33139",
+  "latitude": 25.7617,
+  "longitude": -80.1918,
+  "amenities": ["wifi", "pool", "parking", "ac"],
+  "images": ["https://example.com/image1.jpg", "https://example.com/image2.jpg"]
+}
+
+###
+
+@propertyId = {{createProperty.response.body.id}}
+
+### Publicar propiedad
+PATCH {{baseUrl}}/properties/{{propertyId}}/publish
+Authorization: Bearer {{tokenHost}}
+
+###
+
+### Ver todas las propiedades
+GET {{baseUrl}}/properties
+
+###
+
+### Ver detalle de propiedad
+GET {{baseUrl}}/properties/{{propertyId}}
+
+###
+
+### ========================================
+### 5. FAVORITOS (como Guest)
+### ========================================
+
+### Agregar a favoritos
+POST {{baseUrl}}/favorites/{{propertyId}}
+Authorization: Bearer {{tokenGuest}}
+
+###
+
+### Ver mis favoritos
+GET {{baseUrl}}/favorites
+Authorization: Bearer {{tokenGuest}}
+
+###
+
+### Verificar si está en favoritos
+GET {{baseUrl}}/favorites/check/{{propertyId}}
+Authorization: Bearer {{tokenGuest}}
+
+###
+
+### Ver contador de favoritos
+GET {{baseUrl}}/favorites/count/{{propertyId}}
+
+###
+
+### ========================================
+### 6. CREAR BOOKING (como Guest)
+### ========================================
+
+### Crear booking
+# @name createBooking
+POST {{baseUrl}}/bookings
+Authorization: Bearer {{tokenGuest}}
+Content-Type: application/json
+
+{
+  "propertyId": "{{propertyId}}",
+  "checkIn": "2026-02-01T15:00:00.000Z",
+  "checkOut": "2026-02-05T11:00:00.000Z",
+  "guests": 4
+}
+
+###
+
+@bookingId = {{createBooking.response.body.id}}
+
+### Ver mis bookings
+GET {{baseUrl}}/bookings/my-bookings
+Authorization: Bearer {{tokenGuest}}
+
+###
+
+### Ver bookings como host
+GET {{baseUrl}}/bookings/host-bookings
+Authorization: Bearer {{tokenHost}}
+
+###
+
+### Confirmar booking (como Host)
+PATCH {{baseUrl}}/bookings/{{bookingId}}/confirm
+Authorization: Bearer {{tokenHost}}
+
+###
+
+### ========================================
+### 7. PAGOS
+### ========================================
+
+### Crear Payment Intent
+# @name createPayment
+POST {{baseUrl}}/payments/create-intent
+Authorization: Bearer {{tokenGuest}}
+Content-Type: application/json
+
+{
+  "bookingId": "{{bookingId}}"
+}
+
+###
+
+@paymentIntentId = {{createPayment.response.body.paymentIntentId}}
+
+### Ver pago por booking
+GET {{baseUrl}}/payments/booking/{{bookingId}}
+Authorization: Bearer {{tokenGuest}}
+
+###
+
+### ========================================
+### 8. REVIEWS (después de completar booking)
+### ========================================
+
+### Crear review
+# @name createReview
+POST {{baseUrl}}/reviews
+Authorization: Bearer {{tokenGuest}}
+Content-Type: application/json
+
+{
+  "bookingId": "{{bookingId}}",
+  "rating": 5,
+  "comment": "Amazing place! Highly recommended."
+}
+
+###
+
+@reviewId = {{createReview.response.body.id}}
+
+### Ver reviews de la propiedad
+GET {{baseUrl}}/reviews/property/{{propertyId}}
+
+###
+
+### Ver mis reviews
+GET {{baseUrl}}/reviews/my-reviews
+Authorization: Bearer {{tokenGuest}}
+
+###
+
+### ========================================
+### 9. CLEANUP (opcional)
+### ========================================
+
+### Cancelar booking
+PATCH {{baseUrl}}/bookings/{{bookingId}}/cancel
+Authorization: Bearer {{tokenGuest}}
+
+###
+
+### Remover de favoritos
+DELETE {{baseUrl}}/favorites/{{propertyId}}
+Authorization: Bearer {{tokenGuest}}
+
+###
+
+### Eliminar propiedad
+DELETE {{baseUrl}}/properties/{{propertyId}}
+Authorization: Bearer {{tokenHost}}

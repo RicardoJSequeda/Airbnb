@@ -1,0 +1,27 @@
+### Variables
+@baseUrl = http://localhost:3001/api
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbWtrYzA2cHMwMDAweXZqb3F4czQ5NjBnIiwiZW1haWwiOiJuZXd1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzY4Nzc2Nzc5LCJleHAiOjE3NjkzODE1Nzl9.ak6eORh2neBqj1IEmgNkiFLbk---z-lsif6yuCQ0jWU
+
+### 1. Registrar nuevo usuario
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "newuser@example.com",
+  "password": "password123",
+  "name": "New User"
+}
+
+### 2. Login
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "newuser@example.com",
+  "password": "password123"
+}
+
+### 3. Obtener perfil (requiere token del login anterior)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
