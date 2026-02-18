@@ -52,11 +52,14 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users         User[]
-  subscriptions Subscription[]
-  properties    Property[]
-  bookings      Booking[]
-  payments      Payment[]
+  users              User[]
+  subscriptions     Subscription[]
+  properties        Property[]
+  bookings          Booking[]
+  payments          Payment[]
+  experiences       Experience[]
+  experienceBookings ExperienceBooking[]
+  experiencePayments ExperiencePayment[]
 
   @@map("organizations")
 }
@@ -91,10 +94,13 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  properties Property[] @relation("HostProperties")
-  bookings   Booking[]  @relation("GuestBookings")
-  reviews    Review[]   @relation("GuestReviews")
-  favorites  Favorite[]
+  properties        Property[]         @relation("HostProperties")
+  bookings          Booking[]          @relation("GuestBookings")
+  reviews              Review[]              @relation("GuestReviews")
+  favorites            Favorite[]
+  experiences          Experience[]          @relation("HostExperiences")
+  experienceBookings   ExperienceBooking[]   @relation("GuestExperienceBookings")
+  experienceReviews    ExperienceReview[]    @relation("GuestExperienceReviews")
 
   @@index([supabaseId])
   @@index([organizationId])
@@ -213,6 +219,209 @@ model Review {
   @@index([propertyId])
   @@index([guestId])
   @@map("reviews")
+}
+
+// ==================== LOCATIONS SCHEMA ====================
+model Department {
+  id           String   @id @default(uuid())
+  name         String
+  slug         String   @unique
+  country      String   @default("CO")
+  isActive     Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cities City[]
+
+  @@map("departments")
+}
+
+model City {
+  id                    String   @id @default(uuid())
+  name                  String
+  slug                  String
+  departmentId          String
+  department            Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  suggestionDescription String?
+  latitude              Float?
+  longitude             Float?
+  searchCount           Int      @default(0)
+  displayOrder          Int      @default(0)
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  places            Place[]
+  locationSearchLogs LocationSearchLog[]
+
+  @@unique([slug, departmentId])
+  @@index([departmentId])
+  @@index([slug])
+  @@map("cities")
+}
+
+model Place {
+  id                    String   @id @default(uuid())
+  name                  String
+  type                  String
+  cityId                String
+  city                  City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  suggestionDescription String?
+  displayOrder          Int      @default(0)
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([cityId])
+  @@map("places")
+}
+
+model LocationSearchLog {
+  id        String   @id @default(uuid())
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([cityId])
+  @@map("location_search_logs")
+}
+
+// ==================== EXPERIENCE SCHEMA ====================
+model Experience {
+  id             String   @id @default(uuid())
+  title          String
+  description    String
+  pricePerParticipant Decimal @db.Decimal(10, 2)
+  currency       String   @default("USD")
+  maxParticipants Int
+  duration       Int      // Duración en minutos
+  category       String   // "tour", "workshop", "tasting", "adventure", etc.
+  status         String   @default("DRAFT")
+
+  address   String
+  city      String
+  state     String?
+  country   String
+  zipCode   String?
+  latitude  Float
+  longitude Float
+
+  hostId         String
+  host           User         @relation("HostExperiences", fields: [hostId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  includes       String   // JSON array: ["Guía local", "Entradas", "Transporte"]
+  excludes       String?  // JSON array: ["Comida", "Propinas"]
+  images         String   // JSON array de URLs
+  meetingPoint   String?  // Punto de encuentro
+  languages      String?  // JSON array: ["es", "en"]
+  ageRestriction String?  // "18+", "All ages", etc.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings      ExperienceBooking[]
+  reviews       ExperienceReview[]
+  availableSlots ExperienceSlot[]
+
+  @@index([hostId])
+  @@index([organizationId])
+  @@index([city, country])
+  @@index([category])
+  @@index([status])
+  @@map("experiences")
+}
+
+model ExperienceSlot {
+  id           String   @id @default(uuid())
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  
+  date         DateTime  // Fecha específica
+  startTime    String    // Hora de inicio (ej: "09:00", "21:00")
+  endTime      String?   // Hora de fin (opcional)
+  availableSpots Int     // Espacios disponibles
+  isRecurring  Boolean   @default(false) // Si se repite semanalmente
+  dayOfWeek    Int?      // 0=Domingo, 1=Lunes... (solo si isRecurring)
+  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([experienceId])
+  @@index([date])
+  @@index([dayOfWeek])
+  @@map("experience_slots")
+}
+
+model ExperienceBooking {
+  id             String        @id @default(uuid())
+  experienceId   String
+  experience     Experience    @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  guestId        String
+  guest          User          @relation("GuestExperienceBookings", fields: [guestId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  date           DateTime      // Fecha y hora de la experiencia
+  participants   Int           // Número de participantes
+  totalPrice     Decimal       @db.Decimal(10, 2)
+  status         BookingStatus @default(PENDING)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payment ExperiencePayment?
+  review  ExperienceReview?
+
+  @@index([experienceId])
+  @@index([guestId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([date])
+  @@map("experience_bookings")
+}
+
+model ExperiencePayment {
+  id                    String        @id @default(uuid())
+  bookingId             String        @unique
+  organizationId        String
+  organization          Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  amount                Decimal       @db.Decimal(10, 2)
+  currency              String        @default("usd")
+  stripePaymentIntentId String?       @unique
+  status                PaymentStatus @default(PENDING)
+  paidAt                DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  platformFeeAmount Decimal? @db.Decimal(10, 2)
+  hostNetAmount     Decimal? @db.Decimal(10, 2)
+
+  booking ExperienceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([organizationId])
+  @@map("experience_payments")
+}
+
+model ExperienceReview {
+  id           String   @id @default(uuid())
+  bookingId    String   @unique
+  booking      ExperienceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  guestId      String
+  guest        User     @relation("GuestExperienceReviews", fields: [guestId], references: [id], onDelete: Cascade)
+  rating       Int
+  comment      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([experienceId])
+  @@index([guestId])
+  @@map("experience_reviews")
 }
 
 // ==================== FAVORITE SCHEMA ====================

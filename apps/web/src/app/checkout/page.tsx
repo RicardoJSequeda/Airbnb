@@ -7,9 +7,10 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import { paymentsApi } from '@/lib/api/payments'
+import { env } from '@/lib/env'
 
 const CHECKOUT_DATA_KEY = 'checkout_booking_data'
-const STRIPE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
+const STRIPE_KEY = env.stripePublishableKey
 const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : null
 
 function CheckoutForm() {

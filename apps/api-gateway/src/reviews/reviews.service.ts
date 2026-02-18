@@ -61,7 +61,11 @@ export class ReviewsService {
       throw new BadRequestException('You can only review after checkout');
     }
 
-    // Crear la reseña
+    if (!booking.organizationId) {
+      throw new BadRequestException('Booking has no organization');
+    }
+
+    // Crear la reseña (Review no tiene organizationId; se infiere por booking→property)
     const review = await this.prisma.review.create({
       data: {
         bookingId,
@@ -91,18 +95,18 @@ export class ReviewsService {
   }
 
   async findByProperty(propertyId: string, organizationId?: string | null) {
-    const propertyWhere: { id: string; organizationId?: string } = {
-      id: propertyId,
-    };
-    if (organizationId) propertyWhere.organizationId = organizationId;
-
     const property = await this.prisma.property.findFirst({
-      where: propertyWhere,
+      where: { id: propertyId },
     });
     if (!property) throw new NotFoundException('Property not found');
 
+    // Solo reviews de esa property (organization se infiere por property)
+    const targetOrgId = organizationId ?? property.organizationId;
     const reviews = await this.prisma.review.findMany({
-      where: { propertyId },
+      where: {
+        propertyId,
+        property: targetOrgId ? { organizationId: targetOrgId } : undefined,
+      },
       include: {
         guest: {
           select: {
@@ -134,9 +138,12 @@ export class ReviewsService {
     };
   }
 
-  async findByUser(userId: string, organizationId: string) {
-    const where: any = { guestId: userId };
-    if (organizationId) where.booking = { organizationId };
+  async findByUser(userId: string, organizationId: string | null) {
+    const where: {
+      guestId: string;
+      property?: { organizationId: string };
+    } = { guestId: userId };
+    if (organizationId) where.property = { organizationId };
 
     const reviews = await this.prisma.review.findMany({
       where,
@@ -166,8 +173,8 @@ export class ReviewsService {
   }
 
   async findOne(id: string, organizationId?: string | null) {
-    const where: any = { id };
-    if (organizationId) where.booking = { organizationId };
+    const where: { id: string; property?: { organizationId: string } } = { id };
+    if (organizationId) where.property = { organizationId };
 
     const review = await this.prisma.review.findFirst({
       where,
@@ -210,28 +217,17 @@ export class ReviewsService {
     userId: string,
     organizationId?: string | null,
   ) {
-    const baseWhere: any = { id, guestId: userId };
-    if (organizationId) baseWhere.booking = { organizationId };
+    const baseWhere: {
+      id: string;
+      guestId: string;
+      property?: { organizationId: string };
+    } = { id, guestId: userId };
+    if (organizationId) baseWhere.property = { organizationId };
 
     const review = await this.prisma.review.findFirst({ where: baseWhere });
 
     if (!review) {
       throw new NotFoundException('Review not found');
-    }
-
-    if (review.guestId !== userId) {
-      throw new ForbiddenException('You can only update your own reviews');
-    }
-
-    // Solo permitir actualizar dentro de 7 días
-    const daysSinceCreation = Math.floor(
-      (Date.now() - review.createdAt.getTime()) / (1000 * 60 * 60 * 24),
-    );
-
-    if (daysSinceCreation > 7) {
-      throw new BadRequestException(
-        'Reviews can only be updated within 7 days',
-      );
     }
 
     const updated = await this.prisma.review.update({
@@ -258,27 +254,19 @@ export class ReviewsService {
   }
 
   async remove(id: string, userId: string, organizationId?: string | null) {
-    const baseWhere: any = {
-      id,
-      OR: [{ guestId: userId }, { property: { hostId: userId } }],
-    };
-    if (organizationId) baseWhere.booking = { organizationId };
+    const baseWhere: {
+      id: string;
+      guestId: string;
+      property?: { organizationId: string };
+    } = { id, guestId: userId };
+    if (organizationId) baseWhere.property = { organizationId };
 
     const review = await this.prisma.review.findFirst({
       where: baseWhere,
-      include: {
-        property: { select: { hostId: true } },
-      },
     });
 
     if (!review) {
       throw new NotFoundException('Review not found');
-    }
-
-    const guestOrHost =
-      review.guestId === userId || review.property.hostId === userId;
-    if (!guestOrHost) {
-      throw new ForbiddenException('You can only delete your own reviews');
     }
 
     await this.prisma.review.delete({

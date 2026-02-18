@@ -21,7 +21,7 @@ export function toPropertyCardDisplay(p: Property): PropertyCardDisplay {
     distance: '—',
     dates: '—',
     price: typeof p.price === 'number' ? p.price : Number(p.price) || 0,
-    rating: 0,
+    rating: p.averageRating ?? 0,
     images: Array.isArray(images) ? images : [],
   }
 }

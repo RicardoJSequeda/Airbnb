@@ -1,13 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { Logger } from '@nestjs/common';
+import { validateEnv } from './common/env.validation';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  validateEnv();
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true, // required for Stripe webhook
     logger:
       process.env.NODE_ENV === 'production'
@@ -16,10 +20,10 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService);
-  const port = parseInt(process.env.PORT || '3000', 10);
-  const frontendUrl =
-    configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+  const port = parseInt(process.env.PORT || '4174', 10);
+  const frontendUrl = configService.get<string>('FRONTEND_URL')!;
 
+  app.set('trust proxy', 1);
   app.use(helmet());
 
   app.useGlobalPipes(

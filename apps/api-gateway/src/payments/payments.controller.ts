@@ -71,7 +71,10 @@ export class PaymentsController {
     @Headers('stripe-signature') signature: string,
   ) {
     if (!req.rawBody) {
-      throw new BadRequestException('Missing raw body');
+      throw new BadRequestException('Missing raw body (ensure rawBody: true in NestJS)');
+    }
+    if (!signature) {
+      throw new BadRequestException('Missing Stripe-Signature header');
     }
     return this.paymentsService.handleWebhook(req.rawBody, signature);
   }

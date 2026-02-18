@@ -16,7 +16,7 @@ const Footer = () => {
   ];
 
   const companyLinks = [
-    { id: "about", label: "Sobre StayHub", href: "#" },
+    { id: "about", label: "Sobre airbnb", href: "#" },
     { id: "careers", label: "Empleo", href: "#" },
   ];
 
@@ -114,7 +114,7 @@ const Footer = () => {
           </div>
 
           <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 mt-6 text-sm text-secondary">
-            <span>© {new Date().getFullYear()} StayHub</span>
+            <span>© {new Date().getFullYear()} airbnb</span>
             <span className="hidden md:inline">·</span>
             <Link href="/terms/privacy" className="hover:underline">
               Privacidad

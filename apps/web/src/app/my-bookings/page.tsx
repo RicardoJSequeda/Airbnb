@@ -6,7 +6,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
+import CreateReviewModal from '@/components/reviews/create-review-modal'
 import { bookingsApi } from '@/lib/api/bookings'
+import { paymentsApi } from '@/lib/api/payments'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { parseErrorMessage } from '@/lib/utils/parse-error'
 import type { Booking } from '@/types'
@@ -26,6 +28,10 @@ export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [reviewModalBooking, setReviewModalBooking] = useState<{
+    id: string
+    title?: string
+  } | null>(null)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -51,6 +57,23 @@ export default function MyBookingsPage() {
       setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: 'CANCELLED' as const } : b)))
     } catch (err: unknown) {
       alert(parseErrorMessage(err, 'Error al cancelar'))
+    }
+  }
+
+  const handlePayNow = async (booking: Booking) => {
+    try {
+      const r = await paymentsApi.createIntent(booking.id)
+      sessionStorage.setItem(
+        'checkout_booking_data',
+        JSON.stringify({
+          bookingId: booking.id,
+          clientSecret: r.clientSecret,
+          paymentIntentId: r.paymentIntentId,
+        })
+      )
+      router.push('/checkout')
+    } catch (err: unknown) {
+      alert(parseErrorMessage(err, 'Error al cargar el pago'))
     }
   }
 
@@ -130,8 +153,8 @@ export default function MyBookingsPage() {
                   <span className="inline-block mt-2 px-2 py-0.5 text-xs rounded bg-gray-100 text-secondary">
                     {STATUS_LABELS[booking.status] ?? booking.status}
                   </span>
-                  {booking.status === 'PENDING' && (
-                    <div className="mt-2 flex gap-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {booking.status === 'PENDING' && (
                       <button
                         type="button"
                         onClick={() => handleCancel(booking.id)}
@@ -139,13 +162,47 @@ export default function MyBookingsPage() {
                       >
                         Cancelar reserva
                       </button>
-                    </div>
-                  )}
+                    )}
+                    {booking.status === 'CONFIRMED' && (
+                      <button
+                        type="button"
+                        onClick={() => handlePayNow(booking)}
+                        className="text-sm text-primary font-medium hover:underline"
+                      >
+                        Pagar ahora
+                      </button>
+                    )}
+                    {booking.status === 'COMPLETED' && !booking.review && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setReviewModalBooking({
+                            id: booking.id,
+                            title: booking.property?.title,
+                          })
+                        }
+                        className="text-sm text-primary font-medium hover:underline"
+                      >
+                        Dejar reseña
+                      </button>
+                    )}
+                  </div>
                 </div>
               </li>
-            ))}
-          </ul>
+            )        )}
+      </ul>
         )}
+
+        <CreateReviewModal
+          open={!!reviewModalBooking}
+          onClose={() => setReviewModalBooking(null)}
+          bookingId={reviewModalBooking?.id ?? ''}
+          propertyTitle={reviewModalBooking?.title}
+          onSuccess={() => {
+            setReviewModalBooking(null)
+            bookingsApi.getMyBookings().then(setBookings)
+          }}
+        />
       </main>
 
       <Footer />

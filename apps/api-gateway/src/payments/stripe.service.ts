@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
@@ -59,7 +59,12 @@ export class StripeService {
 
   async constructWebhookEvent(payload: Buffer, signature: string) {
     const webhookSecret =
-      this.configService.get<string>('STRIPE_WEBHOOK_SECRET') || '';
+      this.configService.get<string>('STRIPE_WEBHOOK_SECRET') ?? '';
+    if (!webhookSecret || webhookSecret.trim() === '') {
+      throw new BadRequestException(
+        'STRIPE_WEBHOOK_SECRET is required for webhook verification. Set it in Railway environment variables.',
+      );
+    }
     return this.stripe.webhooks.constructEvent(
       payload,
       signature,

@@ -277,10 +277,26 @@ export class PropertiesService {
     };
   }
 
-  /** Formato para API pública: omite organizationId. */
+  /** Formato para API pública: omite organizationId, incluye averageRating y totalReviews. */
   private formatPropertyForPublic(property: any) {
     const formatted = this.formatProperty(property);
     const { organizationId, ...publicData } = formatted;
-    return publicData;
+
+    const reviews = property.reviews ?? [];
+    const totalReviews = reviews.length;
+    const averageRating =
+      totalReviews > 0
+        ? Math.round(
+            (reviews.reduce((acc: number, r: any) => acc + r.rating, 0) /
+              totalReviews) *
+              10,
+          ) / 10
+        : 0;
+
+    return {
+      ...publicData,
+      averageRating,
+      totalReviews,
+    };
   }
 }

@@ -226,6 +226,7 @@ export class BookingsService {
             images: true,
           },
         },
+        review: { select: { id: true } },
       },
       orderBy: { createdAt: 'desc' },
     });

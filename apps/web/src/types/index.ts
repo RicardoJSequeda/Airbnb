@@ -29,6 +29,9 @@ export interface Property {
   status: string
   hostId: string
   host?: { id: string; name: string; avatar?: string | null }
+  averageRating?: number
+  totalReviews?: number
+  reviews?: Review[]
   createdAt: string
   updatedAt: string
 }
@@ -47,6 +50,7 @@ export interface Booking {
   property?: Pick<Property, 'id' | 'title' | 'city' | 'country' | 'images'>
   guestId: string
   guest?: User
+  review?: { id: string }
   checkIn: string
   checkOut: string
   guests: number
@@ -73,11 +77,11 @@ export interface Review {
   bookingId: string
   booking?: Booking
   propertyId: string
-  property?: Property
-  userId: string
-  user?: User
+  property?: Partial<Property>
+  guestId: string
+  guest?: { id: string; name: string; avatar?: string | null }
   rating: number
-  comment?: string
+  comment: string
   createdAt: string
   updatedAt: string
 }
@@ -94,3 +98,5 @@ export interface AuthResponse {
   user: User
   token: string
 }
+
+export * from './experience'

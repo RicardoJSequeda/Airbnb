@@ -3,7 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Heart, ChevronLeft, ChevronRight, Star } from "lucide-react";
+import { favoritesApi } from "@/lib/api/favorites";
+import { useAuthStore } from "@/lib/stores/auth-store";
+import { toast } from "sonner";
 import type { PropertyCardDisplay } from "./property-carousel";
 
 interface PropertyCardProps {
@@ -11,9 +15,12 @@ interface PropertyCardProps {
 }
 
 const PropertyCard = ({ property }: PropertyCardProps) => {
+  const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [savingFavorite, setSavingFavorite] = useState(false);
 
   const nextImage = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -31,10 +38,24 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
     }
   };
 
-  const toggleLike = (e: React.MouseEvent) => {
+  const toggleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsLiked(!isLiked);
+    if (!isAuthenticated) {
+      router.push(`/login?redirect=/`);
+      return;
+    }
+    if (savingFavorite) return;
+    setSavingFavorite(true);
+    try {
+      const res = await favoritesApi.toggle(property.id);
+      setIsLiked(res.isFavorite);
+      toast.success(res.isFavorite ? "Añadido a favoritos" : "Quitado de favoritos");
+    } catch {
+      toast.error("Error al actualizar favoritos");
+    } finally {
+      setSavingFavorite(false);
+    }
   };
 
   return (
