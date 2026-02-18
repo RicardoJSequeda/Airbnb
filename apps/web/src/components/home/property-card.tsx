@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import { Heart, ChevronLeft, ChevronRight, Star } from "lucide-react";
-import type { Property } from "./property-carousel";
+import type { PropertyCardDisplay } from "./property-carousel";
 
 interface PropertyCardProps {
-  property: Property;
+  property: PropertyCardDisplay;
 }
 
 const PropertyCard = ({ property }: PropertyCardProps) => {
@@ -37,19 +38,26 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
   };
 
   return (
-    <article 
-      className="w-full cursor-pointer group"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className="relative w-full rounded-xl overflow-hidden mb-3" style={{ aspectRatio: '251.14 / 238.58' }}>
-        <Image
-          src={property.images[currentImageIndex] || "/placeholder.jpg"}
-          alt={property.title}
-          fill
-          className="object-cover transition-transform duration-300"
-          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-        />
+    <Link href={`/properties/${property.id}`}>
+      <article
+        className="w-full cursor-pointer group"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+      <div className="relative w-full rounded-xl overflow-hidden mb-3 bg-gray-200" style={{ aspectRatio: '251.14 / 238.58' }}>
+        {property.images.length > 0 ? (
+          <Image
+            src={property.images[currentImageIndex] ?? property.images[0]}
+            alt={property.title}
+            fill
+            className="object-cover transition-transform duration-300"
+            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+            Sin imagen
+          </div>
+        )}
 
         {property.isGuestFavorite && (
           <div className="absolute top-2.5 left-2.5">
@@ -137,7 +145,7 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
           </h3>
           <div className="flex items-center gap-1 flex-shrink-0">
             <Star className="w-3.5 h-3.5 fill-secondary text-secondary" />
-            <span className="text-sm text-secondary">{property.rating.toFixed(2)}</span>
+            <span className="text-sm text-secondary">{(property.rating || 0).toFixed(2)}</span>
           </div>
         </div>
 
@@ -151,10 +159,11 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
 
         <p className="text-[15px] text-secondary pt-1">
           <span className="font-semibold">{property.price.toLocaleString()} €</span>
-          <span className="font-normal"> en total</span>
+          <span className="font-normal"> noche</span>
         </p>
       </div>
     </article>
+    </Link>
   );
 };
 

@@ -30,7 +30,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         : { message: String(exceptionResponse) };
     const message =
       (res as { message?: string | string[] })?.message ??
-      (exception instanceof Error ? exception.message : 'Internal server error');
+      (exception instanceof Error
+        ? exception.message
+        : 'Internal server error');
     const errorCode = (res as { errorCode?: string })?.errorCode;
 
     const finalMessage = Array.isArray(message) ? message[0] : message;

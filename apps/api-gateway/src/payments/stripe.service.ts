@@ -8,9 +8,11 @@ export class StripeService {
 
   constructor(private configService: ConfigService) {
     const apiKey = this.configService.get<string>('STRIPE_SECRET_KEY');
-    
+
     if (!apiKey) {
-      throw new Error('STRIPE_SECRET_KEY is not defined in environment variables');
+      throw new Error(
+        'STRIPE_SECRET_KEY is not defined in environment variables',
+      );
     }
 
     this.stripe = new Stripe(apiKey, {
@@ -56,7 +58,12 @@ export class StripeService {
   }
 
   async constructWebhookEvent(payload: Buffer, signature: string) {
-    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET') || '';
-    return this.stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    const webhookSecret =
+      this.configService.get<string>('STRIPE_WEBHOOK_SECRET') || '';
+    return this.stripe.webhooks.constructEvent(
+      payload,
+      signature,
+      webhookSecret,
+    );
   }
 }

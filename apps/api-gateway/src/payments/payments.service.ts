@@ -23,7 +23,10 @@ export class PaymentsService {
     private configService: ConfigService,
   ) {}
 
-  async createPaymentIntent(createPaymentIntentDto: CreatePaymentIntentDto, userId: string) {
+  async createPaymentIntent(
+    createPaymentIntentDto: CreatePaymentIntentDto,
+    userId: string,
+  ) {
     const { bookingId } = createPaymentIntentDto;
 
     const booking = await this.prisma.booking.findFirst({
@@ -93,10 +96,17 @@ export class PaymentsService {
     };
   }
 
+  /**
+   * Confirma el pago tras la captura en Stripe.
+   * Transición PENDING → COMPLETED atómica e idempotente a nivel DB.
+   * Evita race condition entre confirm manual y webhook: updateMany condicional asegura que solo
+   * un proceso ejecute la transición; el otro (count=0) devuelve el estado actual sin recalcular.
+   */
   async confirmPayment(confirmPaymentDto: ConfirmPaymentDto, userId: string) {
     const { paymentIntentId, bookingId } = confirmPaymentDto;
 
-    const paymentIntent = await this.stripeService.retrievePaymentIntent(paymentIntentId);
+    const paymentIntent =
+      await this.stripeService.retrievePaymentIntent(paymentIntentId);
 
     if (paymentIntent.status !== 'succeeded') {
       throw new BadRequestException('Payment not successful');
@@ -109,58 +119,86 @@ export class PaymentsService {
 
     // Idempotencia: si ya está COMPLETED, devolver paymentBreakdown existente sin recalcular.
     if (payment.status === 'COMPLETED') {
-      const totalAmount = Number(payment.amount);
-      const platformFee = payment.platformFeeAmount != null
-        ? Number(payment.platformFeeAmount)
-        : 0;
-      const hostNetAmount = payment.hostNetAmount != null
+      return this.buildPaymentBreakdownResponse(payment);
+    }
+
+    const feePercentage =
+      parseFloat(
+        this.configService.get<string>('PLATFORM_FEE_PERCENTAGE') ?? '0',
+      ) || 0;
+    const { platformFee, hostNet } = calculatePlatformFee(
+      payment.amount,
+      feePercentage,
+    );
+
+    // Transacción atómica: updateMany condicional + update de booking.
+    // Si updateMany devuelve count=0, otro proceso (webhook) ya hizo la transición: no recalcular,
+    // no actualizar booking; devolver estado actual desde DB.
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updateResult = await tx.payment.updateMany({
+        where: { id: payment.id, status: 'PENDING' },
+        data: {
+          status: 'COMPLETED',
+          paidAt: new Date(),
+          platformFeeAmount: platformFee,
+          hostNetAmount: hostNet,
+        },
+      });
+
+      if (updateResult.count === 0) {
+        const current = await tx.payment.findUnique({
+          where: { id: payment.id },
+        });
+        return { payment: current!, didTransition: false };
+      }
+
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: 'CONFIRMED' },
+      });
+
+      const updated = await tx.payment.findUnique({
+        where: { id: payment.id },
+      });
+      return { payment: updated!, didTransition: true };
+    });
+
+    if (result.didTransition) {
+      await this.redis.del(holdKey(bookingId));
+    }
+
+    return this.buildPaymentBreakdownResponse(result.payment);
+  }
+
+  private buildPaymentBreakdownResponse(payment: {
+    amount: unknown;
+    platformFeeAmount?: unknown;
+    hostNetAmount?: unknown;
+    [key: string]: unknown;
+  }) {
+    const totalAmount = Number(payment.amount);
+    const platformFee =
+      payment.platformFeeAmount != null ? Number(payment.platformFeeAmount) : 0;
+    const hostNetAmount =
+      payment.hostNetAmount != null
         ? Number(payment.hostNetAmount)
         : totalAmount;
 
-      return {
-        ...payment,
-        paymentBreakdown: {
-          totalAmount,
-          platformFee,
-          hostNetAmount,
-        },
-      };
-    }
-
-    // Transición PENDING -> COMPLETED: calcular comisión con Decimal para precisión.
-    const totalAmount = payment.amount;
-    const feePercentage =
-      parseFloat(this.configService.get<string>('PLATFORM_FEE_PERCENTAGE') ?? '0') || 0;
-    const { platformFee, hostNet } = calculatePlatformFee(totalAmount, feePercentage);
-
-    const updatedPayment = await this.prisma.payment.update({
-      where: { bookingId },
-      data: {
-        status: 'COMPLETED',
-        paidAt: new Date(),
-        platformFeeAmount: platformFee,
-        hostNetAmount: hostNet,
-      },
-    });
-
-    await this.prisma.booking.update({
-      where: { id: bookingId },
-      data: { status: 'CONFIRMED' },
-    });
-
-    await this.redis.del(holdKey(bookingId));
-
     return {
-      ...updatedPayment,
+      ...payment,
       paymentBreakdown: {
-        totalAmount: Number(totalAmount),
-        platformFee: Number(platformFee),
-        hostNetAmount: Number(hostNet),
+        totalAmount,
+        platformFee,
+        hostNetAmount,
       },
     };
   }
 
-  async getPaymentByBooking(bookingId: string, userId: string, organizationId?: string | null) {
+  async getPaymentByBooking(
+    bookingId: string,
+    userId: string,
+    organizationId?: string | null,
+  ) {
     const where: { id: string; organizationId?: string } = { id: bookingId };
     if (organizationId) where.organizationId = organizationId;
 
@@ -180,7 +218,9 @@ export class PaymentsService {
     }
 
     if (booking.guestId !== userId && booking.property.hostId !== userId) {
-      throw new ForbiddenException('You can only view payments for your bookings');
+      throw new ForbiddenException(
+        'You can only view payments for your bookings',
+      );
     }
 
     const payment = await this.prisma.payment.findUnique({
@@ -213,8 +253,14 @@ export class PaymentsService {
     return payment;
   }
 
-  async refundPayment(paymentId: string, userId: string, organizationId?: string | null) {
-    const paymentWhere: { id: string; organizationId?: string } = { id: paymentId };
+  async refundPayment(
+    paymentId: string,
+    userId: string,
+    organizationId?: string | null,
+  ) {
+    const paymentWhere: { id: string; organizationId?: string } = {
+      id: paymentId,
+    };
     if (organizationId) paymentWhere.organizationId = organizationId;
 
     const payment = await this.prisma.payment.findFirst({
@@ -274,7 +320,10 @@ export class PaymentsService {
   }
 
   async handleWebhook(payload: Buffer, signature: string) {
-    const event = await this.stripeService.constructWebhookEvent(payload, signature);
+    const event = await this.stripeService.constructWebhookEvent(
+      payload,
+      signature,
+    );
 
     switch (event.type) {
       case 'payment_intent.succeeded':
@@ -324,8 +373,13 @@ export class PaymentsService {
     // Transición PENDING -> COMPLETED: calcular comisión una sola vez con Prisma.Decimal.
     const totalAmount = payment.amount;
     const feePercentage =
-      parseFloat(this.configService.get<string>('PLATFORM_FEE_PERCENTAGE') ?? '0') || 0;
-    const { platformFee, hostNet } = calculatePlatformFee(totalAmount, feePercentage);
+      parseFloat(
+        this.configService.get<string>('PLATFORM_FEE_PERCENTAGE') ?? '0',
+      ) || 0;
+    const { platformFee, hostNet } = calculatePlatformFee(
+      totalAmount,
+      feePercentage,
+    );
 
     await this.prisma.payment.update({
       where: { id: payment.id },

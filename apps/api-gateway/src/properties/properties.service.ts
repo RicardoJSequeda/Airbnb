@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -13,7 +17,11 @@ export class PropertiesService {
     private redis: RedisService,
   ) {}
 
-  async create(createPropertyDto: CreatePropertyDto, hostId: string, organizationId: string) {
+  async create(
+    createPropertyDto: CreatePropertyDto,
+    hostId: string,
+    organizationId: string,
+  ) {
     const { amenities, images, ...rest } = createPropertyDto;
 
     const property = await this.prisma.property.create({
@@ -70,7 +78,11 @@ export class PropertiesService {
 
     const result = properties.map((p) => this.formatProperty(p));
     if (this.redis.isAvailable()) {
-      await this.redis.set(cacheKey, JSON.stringify(result), PROPERTY_LIST_CACHE_TTL);
+      await this.redis.set(
+        cacheKey,
+        JSON.stringify(result),
+        PROPERTY_LIST_CACHE_TTL,
+      );
     }
     return result;
   }
@@ -212,7 +224,11 @@ export class PropertiesService {
 
     const result = properties.map((p) => this.formatPropertyForPublic(p));
     if (this.redis.isAvailable()) {
-      await this.redis.set(cacheKey, JSON.stringify(result), PROPERTY_LIST_CACHE_TTL);
+      await this.redis.set(
+        cacheKey,
+        JSON.stringify(result),
+        PROPERTY_LIST_CACHE_TTL,
+      );
     }
     return result;
   }

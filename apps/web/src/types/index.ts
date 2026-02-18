@@ -13,7 +13,7 @@ export interface Property {
   description: string
   price: number
   currency: string
-  propertyType: 'APARTMENT' | 'HOUSE' | 'VILLA' | 'CONDO' | 'STUDIO' | 'CABIN'
+  propertyType: string
   maxGuests: number
   bedrooms: number
   bathrooms: number
@@ -21,29 +21,37 @@ export interface Property {
   city: string
   state?: string
   country: string
-  zipCode: string
+  zipCode?: string
   latitude: number
   longitude: number
   amenities: string[]
   images: string[]
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+  status: string
   hostId: string
-  host?: User
+  host?: { id: string; name: string; avatar?: string | null }
   createdAt: string
   updatedAt: string
 }
 
+export type BookingStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'REJECTED'
+  | 'CANCELLED'
+  | 'COMPLETED'
+  | 'REFUNDED'
+
 export interface Booking {
   id: string
   propertyId: string
-  property?: Property
+  property?: Pick<Property, 'id' | 'title' | 'city' | 'country' | 'images'>
   guestId: string
   guest?: User
   checkIn: string
   checkOut: string
   guests: number
   totalPrice: number
-  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED'
+  status: BookingStatus
   createdAt: string
   updatedAt: string
 }

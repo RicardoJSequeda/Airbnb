@@ -10,7 +10,7 @@
 
 2. **Update the values:**
    ```env
-   # Generate a strong JWT secret
+   # JWT_SECRET is REQUIRED - app fails to start without it (no fallback for security)
    JWT_SECRET=use_a_strong_random_string_here
    
    # Get your Stripe keys from https://dashboard.stripe.com/test/apikeys
@@ -41,6 +41,11 @@
    NEXT_PUBLIC_API_URL=http://localhost:3001/api
    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
    ```
+
+### Running tests
+
+- **Unit tests** (`pnpm test`): No env required.
+- **E2E tests** (`pnpm test:e2e`): Require `.env` with `JWT_SECRET`, `DATABASE_URL`, etc. (or equivalent env vars in CI).
 
 ### ⚠️ Security Notes
 

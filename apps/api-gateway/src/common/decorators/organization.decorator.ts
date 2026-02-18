@@ -1,4 +1,8 @@
-import { SetMetadata, createParamDecorator, ExecutionContext } from '@nestjs/common';
+import {
+  SetMetadata,
+  createParamDecorator,
+  ExecutionContext,
+} from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 
 export const SKIP_ORGANIZATION_CHECK_KEY = 'skipOrganizationCheck';

@@ -19,7 +19,11 @@ export class PublicPropertiesController {
     @Query('country') country?: string,
     @Query('propertyType') propertyType?: string,
   ) {
-    return this.propertiesService.findAllPublic({ city, country, propertyType });
+    return this.propertiesService.findAllPublic({
+      city,
+      country,
+      propertyType,
+    });
   }
 
   @Get(':id')

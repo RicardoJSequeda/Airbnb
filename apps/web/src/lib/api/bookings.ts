@@ -1,6 +1,12 @@
 import { apiClient } from './client'
 import { Booking } from '@/types'
 
+export interface CreateBookingResponse {
+  booking: Booking
+  clientSecret: string
+  paymentIntentId: string
+}
+
 export const bookingsApi = {
   create: async (data: {
     propertyId: string
@@ -8,7 +14,7 @@ export const bookingsApi = {
     checkOut: string
     guests: number
   }) => {
-    const response = await apiClient.post<Booking>('/bookings', data)
+    const response = await apiClient.post<CreateBookingResponse>('/bookings', data)
     return response.data
   },
 

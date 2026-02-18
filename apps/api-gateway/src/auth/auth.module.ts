@@ -14,7 +14,13 @@ import { PrismaService } from '../common/prisma.service';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        const secret = configService.get<string>('JWT_SECRET') ?? 'fallback';
+        const secret = configService.get<string>('JWT_SECRET');
+        if (!secret || secret.trim() === '') {
+          throw new Error(
+            'JWT_SECRET is required for signing tokens. Set it in your .env file. ' +
+              'Application will not start without a valid JWT_SECRET.',
+          );
+        }
         return {
           secret,
           signOptions: { expiresIn: '7d' },
@@ -24,12 +30,7 @@ import { PrismaService } from '../common/prisma.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    JwtStrategy,
-    SupabaseJwtStrategy,
-    PrismaService,
-  ],
+  providers: [AuthService, JwtStrategy, SupabaseJwtStrategy, PrismaService],
   exports: [AuthService],
 })
 export class AuthModule {}

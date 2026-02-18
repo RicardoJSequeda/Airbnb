@@ -14,9 +14,10 @@ import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { OrganizationGuard } from '../common/guards/organization.guard';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
 
 @Controller('reviews')
-@UseGuards(SupabaseAuthGuard, OrganizationGuard)
+@UseGuards(SupabaseAuthGuard, OrganizationGuard, SubscriptionGuard)
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
@@ -51,7 +52,11 @@ export class ReviewsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateReviewDto: UpdateReviewDto, @Request() req) {
+  update(
+    @Param('id') id: string,
+    @Body() updateReviewDto: UpdateReviewDto,
+    @Request() req,
+  ) {
     return this.reviewsService.update(
       id,
       updateReviewDto,
@@ -62,6 +67,10 @@ export class ReviewsController {
 
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req) {
-    return this.reviewsService.remove(id, req.user.userId, req.user.organizationId ?? null);
+    return this.reviewsService.remove(
+      id,
+      req.user.userId,
+      req.user.organizationId ?? null,
+    );
   }
 }
