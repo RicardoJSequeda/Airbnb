@@ -3,16 +3,16 @@ import Image from "next/image";
 
 const Logo = () => {
   return (
-    <Link href="/" className="flex items-center gap-2" aria-label="airbnb Inicio">
+    <Link href="/" className="flex items-center gap-0.01" aria-label="airbnb Inicio">
       <Image
-        src="/belo.svg"
-        alt=""
-        width={32}
-        height={32}
-        className="shrink-0"
+        src="/icons/logo.png"
+        alt="airbnb"
+        width={56}
+        height={56}
+        className="shrink-0 object-contain w-14 h-14"
         priority
       />
-      <span className="text-xl font-semibold tracking-tight text-[#FF5A5F] lowercase">
+      <span className="text-lg font-semibold tracking-tight text-[#FF5A5F] lowercase">
         airbnb
       </span>
     </Link>

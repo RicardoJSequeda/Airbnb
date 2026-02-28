@@ -3,7 +3,7 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "airbnb — Encuentra tu próximo alojamiento",
+  title: "AirBnb — Encuentra tu próximo alojamiento",
   description: "Reserva alojamientos únicos en todo el mundo. Registro fácil, pago seguro con Stripe y confirmación instantánea.",
 };
 
