@@ -22,7 +22,10 @@ export interface Experience {
   languages: string[]
   ageRestriction?: string
   hostId: string
-  host?: { id: string; name: string; avatar?: string | null }
+  host?: { id: string; name: string; avatar?: string | null; email?: string }
+  hostOccupation?: string
+  hostBio?: string
+  hostRegistrationNumber?: string
   averageRating?: number
   totalReviews?: number
   reviews?: ExperienceReview[]

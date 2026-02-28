@@ -1,0 +1,34 @@
+# Backend API (monorepo: necesita packages/database)
+# Uso: docker build -f Dockerfile.api -t airbnb-api .
+# Run:  docker run -p 4174:4174 --env-file apps/api-gateway/.env airbnb-api
+
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@latest --activate
+WORKDIR /app
+
+# Dependencias
+FROM base AS deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api-gateway/package.json ./apps/api-gateway/
+COPY packages/database/package.json ./packages/database/
+RUN pnpm install --frozen-lockfile
+
+# Build
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/api-gateway/node_modules ./apps/api-gateway/node_modules
+COPY --from=deps /app/packages/database/node_modules ./packages/database/node_modules
+COPY . .
+RUN pnpm --filter @airbnb-clone/database run generate && pnpm run build --filter=api-gateway
+
+# Producción
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/apps/api-gateway/dist ./apps/api-gateway/dist
+COPY --from=builder /app/apps/api-gateway/package.json ./apps/api-gateway/
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api-gateway/node_modules ./apps/api-gateway/node_modules
+COPY --from=builder /app/packages/database ./packages/database
+EXPOSE 4174
+CMD ["node", "apps/api-gateway/dist/main.js"]

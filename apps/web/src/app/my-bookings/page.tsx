@@ -7,9 +7,11 @@ import Image from 'next/image'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import CreateReviewModal from '@/components/reviews/create-review-modal'
-import { bookingsApi } from '@/lib/api/bookings'
-import { paymentsApi } from '@/lib/api/payments'
 import { useAuthStore } from '@/lib/stores/auth-store'
+import { useLoginModalStore } from '@/lib/stores/login-modal-store'
+import { useMyBookings } from '@/features/bookings/hooks/useMyBookings'
+import { useCancelBooking } from '@/features/bookings/hooks/useCancelBooking'
+import { useCreatePaymentIntent } from '@/features/payments/hooks'
 import { parseErrorMessage } from '@/lib/utils/parse-error'
 import type { Booking } from '@/types'
 
@@ -25,56 +27,41 @@ const STATUS_LABELS: Record<string, string> = {
 export default function MyBookingsPage() {
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const openLoginModal = useLoginModalStore((s) => s.open)
+  const { bookings, loading, error, refetch } = useMyBookings(!!isAuthenticated)
+  const { cancel: cancelBooking, isCancelling, error: cancelError } = useCancelBooking()
+  const { createPaymentIntent, loading: creatingIntent, error: paymentError } = useCreatePaymentIntent()
   const [reviewModalBooking, setReviewModalBooking] = useState<{
     id: string
     title?: string
   } | null>(null)
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login?redirect=/my-bookings')
-      return
-    }
-  }, [isAuthenticated, router])
-
-  useEffect(() => {
-    if (!isAuthenticated) return
-
-    bookingsApi
-      .getMyBookings()
-      .then(setBookings)
-      .catch((err) => setError(parseErrorMessage(err, 'Error al cargar')))
-      .finally(() => setLoading(false))
-  }, [isAuthenticated])
+    if (!isAuthenticated) openLoginModal('/my-bookings')
+  }, [isAuthenticated, openLoginModal])
 
   const handleCancel = async (id: string) => {
     if (!confirm('¿Cancelar esta reserva?')) return
-    try {
-      await bookingsApi.cancel(id)
-      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: 'CANCELLED' as const } : b)))
-    } catch (err: unknown) {
-      alert(parseErrorMessage(err, 'Error al cancelar'))
-    }
+    const ok = await cancelBooking(id)
+    if (ok) refetch()
+    else if (cancelError) alert(cancelError)
   }
 
   const handlePayNow = async (booking: Booking) => {
-    try {
-      const r = await paymentsApi.createIntent(booking.id)
-      sessionStorage.setItem(
-        'checkout_booking_data',
-        JSON.stringify({
-          bookingId: booking.id,
-          clientSecret: r.clientSecret,
-          paymentIntentId: r.paymentIntentId,
-        })
-      )
-      router.push('/checkout')
-    } catch (err: unknown) {
-      alert(parseErrorMessage(err, 'Error al cargar el pago'))
+    const r = await createPaymentIntent(booking.id)
+    if (!r) {
+      if (paymentError) alert(paymentError)
+      return
     }
+    sessionStorage.setItem(
+      'checkout_booking_data',
+      JSON.stringify({
+        bookingId: booking.id,
+        clientSecret: r.clientSecret,
+        paymentIntentId: r.paymentIntentId,
+      }),
+    )
+    router.push('/checkout')
   }
 
   if (!isAuthenticated) return null
@@ -101,9 +88,9 @@ export default function MyBookingsPage() {
       <main className="max-w-[800px] mx-auto px-6 py-8">
         <h1 className="text-2xl font-semibold text-secondary mb-6">Mis reservas</h1>
 
-        {error && (
+        {(error || cancelError || paymentError) && (
           <div className="p-4 mb-6 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
+            {error || cancelError || paymentError}
           </div>
         )}
 
@@ -158,18 +145,20 @@ export default function MyBookingsPage() {
                       <button
                         type="button"
                         onClick={() => handleCancel(booking.id)}
-                        className="text-sm text-red-600 hover:underline"
+                        disabled={isCancelling}
+                        className="text-sm text-red-600 hover:underline disabled:opacity-50"
                       >
-                        Cancelar reserva
+                        {isCancelling ? 'Cancelando…' : 'Cancelar reserva'}
                       </button>
                     )}
                     {booking.status === 'CONFIRMED' && (
                       <button
                         type="button"
                         onClick={() => handlePayNow(booking)}
-                        className="text-sm text-primary font-medium hover:underline"
+                        disabled={creatingIntent}
+                        className="text-sm text-primary font-medium hover:underline disabled:opacity-50"
                       >
-                        Pagar ahora
+                        {creatingIntent ? 'Preparando pago…' : 'Pagar ahora'}
                       </button>
                     )}
                     {booking.status === 'COMPLETED' && !booking.review && (
@@ -200,7 +189,7 @@ export default function MyBookingsPage() {
           propertyTitle={reviewModalBooking?.title}
           onSuccess={() => {
             setReviewModalBooking(null)
-            bookingsApi.getMyBookings().then(setBookings)
+            refetch()
           }}
         />
       </main>

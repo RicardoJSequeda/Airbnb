@@ -10,6 +10,7 @@ import ReviewCard from '@/components/reviews/review-card'
 import EditReviewModal from '@/components/reviews/edit-review-modal'
 import { reviewsApi } from '@/lib/api/reviews'
 import { useAuthStore } from '@/lib/stores/auth-store'
+import { useLoginModalStore } from '@/lib/stores/login-modal-store'
 import { parseErrorMessage } from '@/lib/utils/parse-error'
 import { toast } from 'sonner'
 import type { Review } from '@/types'
@@ -17,17 +18,15 @@ import type { Review } from '@/types'
 export default function MyReviewsPage() {
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
+  const openLoginModal = useLoginModalStore((s) => s.open)
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingReview, setEditingReview] = useState<Review | null>(null)
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login?redirect=/my-reviews')
-      return
-    }
-  }, [isAuthenticated, router])
+    if (!isAuthenticated) openLoginModal('/my-reviews')
+  }, [isAuthenticated, openLoginModal])
 
   useEffect(() => {
     if (!isAuthenticated) return

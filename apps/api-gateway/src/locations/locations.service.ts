@@ -1,6 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
-import { Prisma } from '@prisma/client';
 
 export interface LocationSuggestion {
   id: string;
@@ -21,10 +20,13 @@ export interface PlaceSuggestion {
 
 @Injectable()
 export class LocationsService {
+  private readonly logger = new Logger(LocationsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Obtiene destinos sugeridos. Escalable: filtrar por departamento, ordenar por tendencias.
+   * Si la BD no está disponible o las tablas no existen, devuelve [] para no romper el front.
    */
   async getSuggestions(options?: {
     departmentSlug?: string;
@@ -33,34 +35,41 @@ export class LocationsService {
   }) {
     const { departmentSlug, limit = 20, sortBy = 'displayOrder' } = options ?? {};
 
-    const orderBy: Prisma.CityOrderByWithRelationInput[] =
-      sortBy === 'trending'
-        ? [{ searchCount: 'desc' }, { displayOrder: 'asc' }]
-        : [{ displayOrder: 'asc' }, { name: 'asc' }];
+    try {
+      const orderBy =
+        sortBy === 'trending'
+          ? [{ searchCount: 'desc' as const }, { displayOrder: 'asc' as const }]
+          : [{ displayOrder: 'asc' as const }, { name: 'asc' as const }];
 
-    const cities = await this.prisma.city.findMany({
-      where: {
-        isActive: true,
-        ...(departmentSlug && {
-          department: { slug: departmentSlug, isActive: true },
-        }),
-      },
-      include: {
-        department: true,
-      },
-      orderBy,
-      take: limit,
-    });
+      const cities = await this.prisma.city.findMany({
+        where: {
+          isActive: true,
+          ...(departmentSlug && {
+            department: { slug: departmentSlug, isActive: true },
+          }),
+        },
+        include: {
+          department: { select: { name: true } },
+        },
+        orderBy,
+        take: limit,
+      });
 
-    return cities.map((c) => ({
-      id: c.id,
-      name: `${c.name}, ${c.department.name}`,
-      city: c.name,
-      region: c.department.name,
-      description: c.suggestionDescription,
-      latitude: c.latitude,
-      longitude: c.longitude,
-    }));
+      return cities.map((c) => ({
+        id: c.id,
+        name: `${c.name}, ${c.department.name}`,
+        city: c.name,
+        region: c.department.name,
+        description: c.suggestionDescription,
+        latitude: c.latitude,
+        longitude: c.longitude,
+      }));
+    } catch (err) {
+      this.logger.warn(
+        `getSuggestions failed (returning []): ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return [];
+    }
   }
 
   /**

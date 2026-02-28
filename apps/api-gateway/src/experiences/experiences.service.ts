@@ -1,7 +1,9 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
@@ -12,6 +14,8 @@ const EXPERIENCE_LIST_CACHE_TTL = 60;
 
 @Injectable()
 export class ExperiencesService {
+  private readonly logger = new Logger(ExperiencesService.name);
+
   constructor(
     private prisma: PrismaService,
     private redis: RedisService,
@@ -196,99 +200,122 @@ export class ExperiencesService {
     return this.formatExperience(updated);
   }
 
-  /** API pública: todas las experiencias PUBLISHED. Nunca expone organizationId. */
+  /** API pública: todas las experiencias PUBLISHED. Nunca expone organizationId. Si la BD falla, devuelve []. */
   async findAllPublic(filters?: {
     city?: string;
     country?: string;
     category?: string;
     minParticipants?: number;
   }) {
-    const where: any = { status: 'PUBLISHED' };
+    try {
+      const where: any = { status: 'PUBLISHED' };
 
-    if (filters?.city) where.city = filters.city;
-    if (filters?.country) where.country = filters.country;
-    if (filters?.category) where.category = filters.category;
-    if (filters?.minParticipants) {
-      where.maxParticipants = { gte: filters.minParticipants };
-    }
+      if (filters?.city) where.city = filters.city;
+      if (filters?.country) where.country = filters.country;
+      if (filters?.category) where.category = filters.category;
+      if (filters?.minParticipants) {
+        where.maxParticipants = { gte: filters.minParticipants };
+      }
 
-    const cacheKey = `public:experiences:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.category ?? ''}`;
-    if (this.redis.isAvailable()) {
-      const cached = await this.redis.get(cacheKey);
-      if (cached) {
-        try {
-          return JSON.parse(cached);
-        } catch {
-          /* invalid cache */
+      const cacheKey = `public:experiences:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.category ?? ''}`;
+      if (this.redis.isAvailable()) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          try {
+            return JSON.parse(cached);
+          } catch {
+            /* invalid cache */
+          }
         }
       }
-    }
 
-    const experiences = await this.prisma.experience.findMany({
-      where,
-      include: {
-        host: {
-          select: {
-            id: true,
-            name: true,
-            avatar: true,
+      const experiences = await this.prisma.experience.findMany({
+        where,
+        include: {
+          host: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+              occupation: true,
+              bio: true,
+              registrationNumber: true,
+            },
           },
-        },
-        reviews: {
-          include: {
-            guest: {
-              select: {
-                name: true,
-                avatar: true,
+          reviews: {
+            include: {
+              guest: {
+                select: {
+                  name: true,
+                  avatar: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      });
 
-    const result = experiences.map((e) => this.formatExperienceForPublic(e));
-    if (this.redis.isAvailable()) {
-      await this.redis.set(
-        cacheKey,
-        JSON.stringify(result),
-        EXPERIENCE_LIST_CACHE_TTL,
+      const result = experiences.map((e) => this.formatExperienceForPublic(e));
+      if (this.redis.isAvailable()) {
+        await this.redis.set(
+          cacheKey,
+          JSON.stringify(result),
+          EXPERIENCE_LIST_CACHE_TTL,
+        );
+      }
+      return result;
+    } catch (err) {
+      this.logger.warn(
+        `findAllPublic failed (returning []): ${err instanceof Error ? err.message : String(err)}`,
       );
+      return [];
     }
-    return result;
   }
 
   /** API pública: una experiencia PUBLISHED por id. Nunca expone organizationId. */
   async findOnePublic(id: string) {
-    const experience = await this.prisma.experience.findFirst({
-      where: { id, status: 'PUBLISHED' },
-      include: {
-        host: {
-          select: {
-            id: true,
-            name: true,
-            avatar: true,
-            email: true,
+    try {
+      const experience = await this.prisma.experience.findFirst({
+        where: { id, status: 'PUBLISHED' },
+        include: {
+          host: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+              email: true,
+              occupation: true,
+              bio: true,
+              registrationNumber: true,
+            },
           },
-        },
-        reviews: {
-          include: {
-            guest: {
-              select: {
-                name: true,
-                avatar: true,
+          reviews: {
+            include: {
+              guest: {
+                select: {
+                  name: true,
+                  avatar: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      });
 
-    if (!experience) {
-      throw new NotFoundException('Experience not found');
+      if (!experience) {
+        throw new NotFoundException('Experience not found');
+      }
+
+      return this.formatExperienceForPublic(experience);
+    } catch (err) {
+      if (err instanceof NotFoundException) throw err;
+      this.logger.warn(
+        `findOnePublic failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw new ServiceUnavailableException(
+        'No se pudo conectar con la base de datos. Comprueba DATABASE_URL y que las tablas existan.',
+      );
     }
-
-    return this.formatExperienceForPublic(experience);
   }
 
   private safeJsonParse(value: string | null | undefined, fallback: string[] | string = '[]'): any {
@@ -329,10 +356,14 @@ export class ExperiencesService {
           ) / 10
         : 0;
 
+    const host = experience.host;
     return {
       ...publicData,
       averageRating,
       totalReviews,
+      hostOccupation: host?.occupation ?? undefined,
+      hostBio: host?.bio ?? undefined,
+      hostRegistrationNumber: host?.registrationNumber ?? undefined,
       reviews: reviews.map((r: any) => ({
         id: r.id,
         rating: r.rating,

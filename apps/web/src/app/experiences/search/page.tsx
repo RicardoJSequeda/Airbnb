@@ -1,15 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import ExperiencesList from '@/components/experiences/experiences-list'
-import { publicExperiencesApi } from '@/lib/api/experiences'
-import { parseErrorMessage } from '@/lib/utils/parse-error'
-import type { Experience } from '@/types/experience'
+import { useExperiencesList } from '@/features/experiences/hooks'
 
-export default function ExperiencesSearchPage() {
+function ExperiencesSearchContent() {
   const searchParams = useSearchParams()
   const city = searchParams.get('city') ?? ''
   const dateType = searchParams.get('dateType') ?? ''
@@ -20,27 +18,10 @@ export default function ExperiencesSearchPage() {
   const babies = parseInt(searchParams.get('babies') ?? '0', 10)
   const totalParticipants = adults + children + babies
 
-  const [experiences, setExperiences] = useState<Experience[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const filters: { city?: string; country?: string; category?: string } = {}
-    if (city) filters.city = city
-
-    publicExperiencesApi
-      .getAll({
-        ...filters,
-        minParticipants: totalParticipants > 0 ? totalParticipants : undefined,
-      })
-      .then((data) => {
-        // TODO: Filtrar por fecha/hora cuando se implemente ExperienceSlot
-        // Por ahora solo mostramos todas las experiencias filtradas por ciudad y participantes
-        setExperiences(data)
-      })
-      .catch((err) => setError(parseErrorMessage(err, 'Error al cargar experiencias')))
-      .finally(() => setLoading(false))
-  }, [city, totalParticipants])
+  const { experiences, loading, error } = useExperiencesList({
+    city: city || undefined,
+    minParticipants: totalParticipants > 0 ? totalParticipants : undefined,
+  })
 
   const getSearchTitle = () => {
     if (dateType === 'today') return 'Experiencias para hoy'
@@ -106,5 +87,33 @@ export default function ExperiencesSearchPage() {
 
       <Footer />
     </main>
+  )
+}
+
+function ExperiencesSearchFallback() {
+  return (
+    <main className="min-h-screen">
+      <Header />
+      <div className="h-20" />
+      <div className="max-w-[1824px] mx-auto px-6 md:px-10 lg:px-12 py-12">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-64" />
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="aspect-square bg-gray-200 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+      <Footer />
+    </main>
+  )
+}
+
+export default function ExperiencesSearchPage() {
+  return (
+    <Suspense fallback={<ExperiencesSearchFallback />}>
+      <ExperiencesSearchContent />
+    </Suspense>
   )
 }

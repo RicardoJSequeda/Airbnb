@@ -17,7 +17,6 @@
     --color-border-primary: #ebebeb;
     --color-border-secondary: #dddddd;
 
-
     /*========== TYPOGRAPHY ==========
     --font-primary: "Inter", system-ui, sans-serif;
     --font-secondary: "Roboto", system-ui, sans-serif;*/
@@ -99,6 +98,24 @@
   }
   a {
       text-decoration: none;
+  }
+  .maplibregl-popup-content {
+    @apply bg-transparent! shadow-none! p-0! rounded-none!;
+
+    }
+  .maplibregl-popup-tip {
+    @apply hidden!;
+
+    }
+}
+
+/* Micro-animación día seleccionado (calendario tipo Airbnb) */
+@keyframes scale-in {
+  from {
+    transform: scale(0.95);
+  }
+  to {
+    transform: scale(1);
   }
 }
 

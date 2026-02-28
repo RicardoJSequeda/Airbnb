@@ -1,8 +1,30 @@
 -- ============================================
 -- SEED: Registros de ejemplo para Experiencias
--- Ejecutar en Supabase SQL Editor DESPUÉS de crear las tablas
--- Usa el primer usuario y la primera organización existentes
+-- Ejecutar en Supabase SQL Editor DESPUÉS de correr init.sql
+-- Crea (si hace falta) un usuario host demo y usa la primera organización
 -- ============================================
+
+-- Asegurar que exista al menos un usuario host asociado a la org demo
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM "users") THEN
+    INSERT INTO "users" (
+      "email", "password", "name", "avatar", "role", "organizationId",
+      "createdAt", "updatedAt"
+    )
+    VALUES (
+      'demo-host@example.com',
+      'placeholder-password',
+      'Demo Host',
+      NULL,
+      'HOST',
+      (SELECT id FROM "organizations" WHERE slug = 'demo' LIMIT 1),
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP
+    );
+  END IF;
+END;
+$$;
 
 INSERT INTO "experiences" (
     "title", "description", "pricePerParticipant", "currency", "maxParticipants",

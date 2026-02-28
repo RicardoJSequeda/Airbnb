@@ -1,8 +1,7 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserRole } from '@prisma/client';
-import { SubscriptionStatus } from '@prisma/client';
+import { UserRole, SubscriptionStatus } from '../prisma-enums';
 import { SubscriptionGuard } from './subscription.guard';
 import { PrismaService } from '../prisma.service';
 

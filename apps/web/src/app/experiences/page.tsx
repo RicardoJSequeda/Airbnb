@@ -1,25 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import ExperiencesList from '@/components/experiences/experiences-list'
-import { publicExperiencesApi } from '@/lib/api/experiences'
-import { parseErrorMessage } from '@/lib/utils/parse-error'
-import type { Experience } from '@/types/experience'
+import { useExperiencesList } from '@/features/experiences/hooks'
 
 export default function ExperiencesPage() {
-  const [experiences, setExperiences] = useState<Experience[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    publicExperiencesApi
-      .getAll({ city: 'Bogotá', country: 'Colombia' })
-      .then(setExperiences)
-      .catch((err) => setError(parseErrorMessage(err, 'Error al cargar experiencias')))
-      .finally(() => setLoading(false))
-  }, [])
+  const { experiences, loading, error } = useExperiencesList({
+    city: 'Bogotá',
+    country: 'Colombia',
+  })
 
   if (loading) {
     return (
@@ -60,15 +50,14 @@ export default function ExperiencesPage() {
   return (
     <main className="min-h-screen bg-white">
       <Header />
-      {/* Espaciado simétrico: similar al espacio entre nav y buscador (referencia) */}
-      <div className="h-8 md:h-9" />
-      
+      {/* Mismo espaciado que home: nav → contenido */}
+      <div className="h-50" />
+
       {experiences.length > 0 ? (
-        <>
+        <div className="w-full space-y-10 py-8">
           <ExperiencesList
             experiences={experiences}
             title="Experiencias populares en Bogotá"
-            isFirstSection
           />
           <ExperiencesList
             experiences={[...experiences].reverse()}
@@ -76,7 +65,7 @@ export default function ExperiencesPage() {
             subtitle="Organizadas por las personas más interesantes del mundo"
             showArrow
           />
-        </>
+        </div>
       ) : (
         <div className="max-w-[1824px] mx-auto px-6 md:px-10 lg:px-12 py-12">
           <div className="text-center py-16">

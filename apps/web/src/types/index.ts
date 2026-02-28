@@ -4,7 +4,8 @@ export interface User {
   name: string
   role: 'GUEST' | 'HOST' | 'ADMIN'
   avatar?: string
-  createdAt: string
+  organizationId?: string
+  createdAt?: string
 }
 
 export interface Property {

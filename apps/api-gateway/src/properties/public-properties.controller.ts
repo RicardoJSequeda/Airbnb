@@ -14,7 +14,7 @@ export class PublicPropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
   @Get()
-  findAll(
+  async findAll(
     @Query('city') city?: string,
     @Query('country') country?: string,
     @Query('propertyType') propertyType?: string,

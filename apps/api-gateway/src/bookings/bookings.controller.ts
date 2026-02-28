@@ -15,7 +15,7 @@ import { OrganizationGuard } from '../common/guards/organization.guard';
 import { SubscriptionGuard } from '../common/guards/subscription.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '@prisma/client';
+import { UserRole } from '../common/prisma-enums';
 
 @Controller('bookings')
 @UseGuards(SupabaseAuthGuard, OrganizationGuard, SubscriptionGuard)

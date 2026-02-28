@@ -5,6 +5,7 @@ import { ArrowLeft, Share2, Heart } from 'lucide-react'
 import { useState } from 'react'
 import { favoritesApi } from '@/lib/api/favorites'
 import { useAuthStore } from '@/lib/stores/auth-store'
+import { useLoginModalStore } from '@/lib/stores/login-modal-store'
 import { toast } from 'sonner'
 
 interface PropertyHeaderActionsProps {
@@ -22,6 +23,7 @@ export default function PropertyHeaderActions({
 }: PropertyHeaderActionsProps) {
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
+  const openLoginModal = useLoginModalStore((s) => s.open)
   const [saving, setSaving] = useState(false)
 
   const handleShare = async () => {
@@ -46,7 +48,7 @@ export default function PropertyHeaderActions({
 
   const handleSave = async () => {
     if (!isAuthenticated) {
-      router.push(`/login?redirect=/properties/${propertyId}`)
+      openLoginModal(`/properties/${propertyId}`)
       return
     }
     setSaving(true)

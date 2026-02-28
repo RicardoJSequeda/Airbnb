@@ -4,19 +4,17 @@ import { useState, useEffect } from 'react'
 import PropertyCarousel from './property-carousel'
 import { publicPropertiesApi } from '@/lib/api/properties'
 import { toPropertyCardDisplay } from '@/lib/utils/property-mapper'
-import { parseErrorMessage } from '@/lib/utils/parse-error'
 import type { PropertyCardDisplay } from './property-carousel'
 
 export default function HomeProperties() {
   const [properties, setProperties] = useState<PropertyCardDisplay[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     publicPropertiesApi
       .getAll()
-      .then((data) => setProperties(data.map(toPropertyCardDisplay)))
-      .catch((err) => setError(parseErrorMessage(err, 'Error al cargar propiedades')))
+      .then((data) => setProperties(Array.isArray(data) ? data.map(toPropertyCardDisplay) : []))
+      .catch(() => setProperties([]))
       .finally(() => setLoading(false))
   }, [])
 
@@ -30,17 +28,6 @@ export default function HomeProperties() {
               <div key={i} className="aspect-[251/239] bg-gray-200 rounded-xl" />
             ))}
           </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-[1824px] mx-auto px-6 md:px-10 lg:px-12 py-12">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
-          <p className="font-medium">Error</p>
-          <p className="text-sm mt-1">{error}</p>
         </div>
       </div>
     )

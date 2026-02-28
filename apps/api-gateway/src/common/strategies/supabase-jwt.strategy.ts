@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../prisma.service';
 
-import { UserRole } from '@prisma/client';
+import { UserRole } from '../prisma-enums';
 
 @Injectable()
 export class SupabaseJwtStrategy extends PassportStrategy(

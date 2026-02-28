@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -9,19 +9,21 @@ import Header from '@/components/layout/header'
 import LoginModal from '@/components/shared/LoginModal'
 import Footer from '@/components/layout/footer'
 import { publicPropertiesApi } from '@/lib/api/properties'
-import { bookingsApi } from '@/lib/api/bookings'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { parseErrorMessage } from '@/lib/utils/parse-error'
+import { getLocalDateString } from '@/lib/utils'
 import type { Property } from '@/types'
+import { useCreateBooking } from '@/features/bookings/hooks'
 
 const CHECKOUT_DATA_KEY = 'checkout_booking_data'
 
-export default function BookPropertyPage() {
+function BookPropertyContent() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
   const propertyId = params.id as string
   const { isAuthenticated } = useAuthStore()
+  const { createBooking, isCreating, error: createError } = useCreateBooking()
   const [property, setProperty] = useState<Property | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -58,35 +60,38 @@ export default function BookPropertyPage() {
     setSubmitting(true)
     setError(null)
 
-    try {
-      const result = await bookingsApi.create({
-        propertyId,
-        checkIn,
-        checkOut,
-        guests,
-      })
+    const result = await createBooking({
+      propertyId,
+      checkIn,
+      checkOut,
+      guests,
+    })
 
-      if (!result.clientSecret || !result.paymentIntentId || !result.booking?.id) {
-        throw new Error('Respuesta incompleta del servidor')
-      }
-
-      sessionStorage.setItem(
-        CHECKOUT_DATA_KEY,
-        JSON.stringify({
-          bookingId: result.booking.id,
-          clientSecret: result.clientSecret,
-          paymentIntentId: result.paymentIntentId,
-        })
-      )
-      router.push('/checkout')
-    } catch (err: unknown) {
-      setError(parseErrorMessage(err, 'Error al crear la reserva'))
-    } finally {
+    if (!result) {
+      setError(createError ?? 'Error al crear la reserva')
       setSubmitting(false)
+      return
     }
+
+    if (!result.clientSecret || !result.paymentIntentId || !result.booking?.id) {
+      setError('Respuesta incompleta del servidor')
+      setSubmitting(false)
+      return
+    }
+
+    sessionStorage.setItem(
+      CHECKOUT_DATA_KEY,
+      JSON.stringify({
+        bookingId: result.booking.id,
+        clientSecret: result.clientSecret,
+        paymentIntentId: result.paymentIntentId,
+      }),
+    )
+    router.push('/checkout')
+    setSubmitting(false)
   }
 
-  const minDate = new Date().toISOString().split('T')[0]
+  const minDate = getLocalDateString()
 
   if (loading || !property) {
     return (
@@ -536,5 +541,28 @@ export default function BookPropertyPage() {
         }).toString()}`}
       />
     </div>
+  )
+}
+
+function BookPropertyFallback() {
+  return (
+    <div className="min-h-screen flex flex-col pt-20">
+      <Header />
+      <div className="flex-1 max-w-4xl mx-auto px-6 py-12">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-gray-200 rounded w-48" />
+          <div className="h-64 bg-gray-200 rounded-xl" />
+        </div>
+      </div>
+      <Footer />
+    </div>
+  )
+}
+
+export default function BookPropertyPage() {
+  return (
+    <Suspense fallback={<BookPropertyFallback />}>
+      <BookPropertyContent />
+    </Suspense>
   )
 }

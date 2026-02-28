@@ -1,30 +1,20 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { ModalOverlay } from './ModalOverlay'
 import { LoginModalHeader } from './LoginModalHeader'
-import { LoginModalPhoneForm } from './LoginModalPhoneForm'
-import { LoginModalDivider } from './LoginModalDivider'
-import { SocialLoginButtons } from './SocialLoginButtons'
-import type { LoginModalSocialId } from './constants'
+import { LoginModalLoginForm } from './LoginModalLoginForm'
+import { useRegisterModalStore } from '@/lib/stores/register-modal-store'
 
-/** Props opcionales para personalizar textos y comportamiento sin tocar el código interno */
 export type LoginModalContentProps = {
   title?: string
   subtitle?: string
-  dividerLabel?: string
-  privacyLink?: string
-  continueLabel?: string
-  /** Solo mostrar estos proveedores (ej. ['google', 'apple']). Si no se pasa, se muestran todos. */
-  providerIds?: readonly LoginModalSocialId[]
-  /** Callback al pulsar un proveedor social (ej. para analytics o login OAuth) */
-  onSocialProviderClick?: (id: LoginModalSocialId) => void
 }
 
 export type LoginModalProps = {
   open: boolean
   onClose: () => void
-  /** Si se indica, al pulsar Continúa se redirige a /login?redirect=... */
+  /** Tras login exitoso se redirige aquí. Por defecto "/". */
   redirect?: string
 } & LoginModalContentProps
 
@@ -33,47 +23,37 @@ const TITLE_ID = 'login-modal-title'
 export default function LoginModal({
   open,
   onClose,
-  redirect,
+  redirect = '/',
   title,
   subtitle,
-  dividerLabel,
-  privacyLink,
-  continueLabel,
-  providerIds,
-  onSocialProviderClick,
 }: LoginModalProps) {
-  const router = useRouter()
+  const openRegisterModal = useRegisterModalStore((s) => s.open)
 
   if (!open) return null
 
-  const handleContinue = () => {
+  const handleClose = () => {
     onClose()
-    const url = redirect
-      ? `/login?redirect=${encodeURIComponent(redirect)}`
-      : '/login'
-    router.push(url)
+  }
+
+  const handleOpenRegister = () => {
+    onClose()
+    openRegisterModal(redirect)
   }
 
   return (
-    <ModalOverlay onClose={onClose} titleId={TITLE_ID}>
+    <ModalOverlay onClose={handleClose} titleId={TITLE_ID}>
       <div className="px-6 pt-8 pb-6">
-        <LoginModalHeader titleId={TITLE_ID} title={title} subtitle={subtitle} />
-        <LoginModalPhoneForm
-          onContinue={handleContinue}
-          privacyLink={privacyLink}
-          continueLabel={continueLabel}
-        />
-        <LoginModalDivider label={dividerLabel} />
-        <SocialLoginButtons
-          providerIds={providerIds}
-          onProviderClick={onSocialProviderClick}
+        <LoginModalHeader titleId={TITLE_ID} title={title ?? 'Iniciar sesión'} subtitle={subtitle ?? ''} />
+        <LoginModalLoginForm
+          redirect={redirect}
+          onSuccess={handleClose}
+          onOpenRegister={handleOpenRegister}
         />
       </div>
     </ModalOverlay>
   )
 }
 
-// Re-exportar piezas por si se quieren usar por separado o escalar
-export { ModalOverlay, LoginModalHeader, LoginModalPhoneForm, LoginModalDivider, SocialLoginButtons }
+export { ModalOverlay, LoginModalHeader }
 export { LOGIN_MODAL_COUNTRIES, LOGIN_MODAL_SOCIAL_PROVIDERS } from './constants'
 export type { LoginModalCountryCode, LoginModalSocialId } from './constants'

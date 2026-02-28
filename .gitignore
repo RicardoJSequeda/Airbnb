@@ -2,9 +2,9 @@
 
 # Dependencies
 node_modules
+.pnpm-store
 .pnp
 .pnp.js
-.pnpm-store
 
 # Local env files
 .env
@@ -82,6 +82,6 @@ yarn-error.log*
 packages/database/prisma/*.db
 packages/database/prisma/*.db-journal
 
-# Prisma
-prisma/migrations
+# Prisma (solo packages; backend/prisma se versiona para despliegue)
+packages/database/prisma/migrations
 .prisma

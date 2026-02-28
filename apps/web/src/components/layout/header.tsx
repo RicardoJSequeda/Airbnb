@@ -6,10 +6,13 @@ import { usePathname } from "next/navigation";
 import { Globe, Menu, Search, ArrowLeft } from "lucide-react";
 import Logo from "../shared/logo";
 import LoginModal from "../shared/LoginModal";
-import SearchBar from "./searchBar";
-import ModularSearchBar from "./ModularSearchBar";
+import { ShareHostModal } from "../shared/ShareHostModal";
+import RegisterModal from "../shared/RegisterModal";
+import { SearchBar, getVariantFromPathname } from "@/components/search/SearchBar";
 import { detectSearchSection } from "@/lib/search/search-config";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { useLoginModalStore } from "@/lib/stores/login-modal-store";
+import { useRegisterModalStore } from "@/lib/stores/register-modal-store";
 
 /** Header compacto para páginas de listado/detalle (sin nav expandible) */
 const isListingPage = (path: string) => 
@@ -18,13 +21,18 @@ const isListingPage = (path: string) =>
   path.startsWith('/experiences/') ||
   path.startsWith('/services/');
 
+/** Solo logo, sin menú ni búsqueda (p. ej. Confirma y paga) */
+const isLogoOnlyPage = (path: string) => /^\/experiences\/[^/]+\/book\/?$/.test(path ?? '');
+
 const Header = () => {
     const pathname = usePathname();
     const compactMode = isListingPage(pathname ?? '');
     const { isAuthenticated, user, logout } = useAuthStore();
     const [isScrolled, setIsScrolled] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
-    const [loginModalOpen, setLoginModalOpen] = useState(false);
+    const { isOpen: loginModalOpen, close: setLoginModalOpen, open: openLoginModal, redirect: loginRedirect } = useLoginModalStore();
+    const { isOpen: registerModalOpen, close: setRegisterModalOpen, open: openRegisterModal, redirect: registerRedirect } = useRegisterModalStore();
+    const [shareHostModalOpen, setShareHostModalOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [compactSearchOpen, setCompactSearchOpen] = useState(false);
     const [initialSearchSection, setInitialSearchSection] = useState<'destination' | 'dates' | 'guests' | 'participants' | null>(null);
@@ -64,9 +72,11 @@ const Header = () => {
         setInitialSearchSection(null);
     };
 
+    const logoOnly = isLogoOnlyPage(pathname ?? '');
+
     return (
         <>
-            {(isScrolled && isExpanded) || compactSearchOpen ? (
+            {!logoOnly && ((isScrolled && isExpanded) || compactSearchOpen) ? (
                 <div 
                     className="fixed inset-0 bg-black/20 z-40 transition-opacity duration-300"
                     onClick={handleBackdropClick}
@@ -74,15 +84,11 @@ const Header = () => {
             ) : null}
             
             <header className={`fixed top-0 left-0 right-0 z-50 flex flex-col bg-white w-full border-b border-gray-200 shadow-sm transition-all duration-300 ease-in-out ${
-                showExpanded
-                    ? pathname?.startsWith('/experiences')
-                        ? 'h-[280px]'
-                        : 'h-[200px]'
-                    : 'h-20'
+                logoOnly ? 'h-20' : showExpanded ? 'h-[200px]' : 'h-20'
             }`}>
                 <nav className="h-20 flex-shrink-0 flex items-center justify-between w-full max-w-[1824px] mx-auto px-6 md:px-10 lg:px-12">
                     <div className="flex items-center gap-4">
-                        {compactMode && (
+                        {!logoOnly && compactMode && (
                             <button
                                 onClick={() => window.history.back()}
                                 className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors lg:hidden"
@@ -96,6 +102,8 @@ const Header = () => {
                         </div>
                     </div>
                     
+                    {!logoOnly && (
+                    <>
                     <div className={`hidden lg:flex items-center gap-6 transition-all duration-300 ${
                         !compactMode && showExpanded ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none absolute'
                     }`}>
@@ -193,11 +201,18 @@ const Header = () => {
                             </div>
                         )}
                     </div>
+                    </>
+                    )}
                     
+                    {!logoOnly && (
                     <div className="flex items-center gap-2">
-                        <button className="hidden md:block text-sm font-medium px-4 py-2.5 rounded-full hover:bg-gray-100 transition-all duration-200 cursor-pointer">
+                        <button
+                            type="button"
+                            onClick={() => setShareHostModalOpen(true)}
+                            className="hidden md:block text-sm font-medium px-4 py-2.5 rounded-full hover:bg-gray-100 transition-all duration-200 cursor-pointer"
+                          >
                             Conviértete en anfitrión
-                        </button>
+                          </button>
                         
                         <button className="p-2.5 hover:bg-gray-100 rounded-full transition-all duration-200 cursor-pointer" aria-label="Idioma">
                             <Globe className="w-5 h-5 text-gray-700" />
@@ -224,10 +239,17 @@ const Header = () => {
                                             Centro de ayuda
                                         </Link>
                                         <div className="border-t border-gray-100">
-                                            <Link href="/host" className="block px-4 py-3 hover:bg-gray-50" onClick={() => setUserMenuOpen(false)}>
-                                                <p className="text-sm font-medium text-secondary">Conviértete en anfitrión</p>
-                                                <p className="text-xs text-gray-500 mt-0.5">Empieza a anfitrionar y genera ingresos adicionales, ¡es muy sencillo!</p>
-                                            </Link>
+                                            <button
+                                            type="button"
+                                            className="block w-full text-left px-4 py-3 hover:bg-gray-50"
+                                            onClick={() => {
+                                                setUserMenuOpen(false);
+                                                setShareHostModalOpen(true);
+                                            }}
+                                          >
+                                            <p className="text-sm font-medium text-secondary">Conviértete en anfitrión</p>
+                                            <p className="text-xs text-gray-500 mt-0.5">Empieza a anfitrionar y genera ingresos adicionales, ¡es muy sencillo!</p>
+                                          </button>
                                         </div>
                                         <Link href="/invite" className="block px-4 py-3 text-sm font-medium text-secondary hover:bg-gray-50" onClick={() => setUserMenuOpen(false)}>
                                             Invita a un anfitrión
@@ -250,7 +272,7 @@ const Header = () => {
                                                     className="block w-full text-left px-4 py-3 text-sm font-semibold text-secondary hover:bg-gray-50"
                                                     onClick={() => {
                                                         setUserMenuOpen(false);
-                                                        setLoginModalOpen(true);
+                                                        openLoginModal(pathname ?? '/');
                                                     }}
                                                 >
                                                     Iniciar sesión o registrarse
@@ -262,36 +284,43 @@ const Header = () => {
                             )}
                         </div>
                     </div>
+                    )}
                 </nav>
                 
-                {/* Zona del buscador: centrada verticalmente con espaciado simétrico (referencia Airbnb) */}
+                {!logoOnly && (
                 <div className={`flex-1 flex items-center justify-center w-full max-w-[1824px] mx-auto px-6 md:px-10 lg:px-12 transition-all duration-300 ease-out ${
                     showExpanded 
                         ? 'opacity-100 translate-y-0 visible min-h-0' 
                         : 'opacity-0 translate-y-4 pointer-events-none invisible h-0 overflow-hidden'
-                } ${pathname?.startsWith('/experiences') && showExpanded ? 'py-9' : 'py-4'}`}>
-                    {detectSearchSection(pathname ?? '') === 'experiences' ? (
-                        <ModularSearchBar 
-                            initialSection={initialSearchSection ?? undefined}
-                            onClose={compactMode ? () => setCompactSearchOpen(false) : undefined}
-                        />
-                    ) : (
-                        <SearchBar 
-                            key={initialSearchSection ?? 'default'} 
-                            initialSection={
-                                initialSearchSection === 'participants'
-                                    ? undefined
-                                    : (initialSearchSection ?? undefined)
-                            }
-                            onClose={compactMode ? () => setCompactSearchOpen(false) : undefined}
-                        />
-                    )}
+                } ${showExpanded ? 'py-4' : ''}`}>
+                    <SearchBar
+                        variant={getVariantFromPathname(pathname ?? '')}
+                        initialSection={
+                            initialSearchSection === 'participants'
+                                ? 'guests'
+                                : (initialSearchSection === 'destination' || initialSearchSection === 'dates' || initialSearchSection === 'guests'
+                                    ? initialSearchSection
+                                    : undefined)
+                        }
+                        onClose={compactMode ? () => setCompactSearchOpen(false) : undefined}
+                    />
                 </div>
+                )}
             </header>
 
             <LoginModal
                 open={loginModalOpen}
-                onClose={() => setLoginModalOpen(false)}
+                onClose={() => setLoginModalOpen()}
+                redirect={loginRedirect}
+            />
+            <ShareHostModal
+                open={shareHostModalOpen}
+                onClose={() => setShareHostModalOpen(false)}
+            />
+            <RegisterModal
+                open={registerModalOpen}
+                onClose={() => setRegisterModalOpen()}
+                redirect={registerRedirect}
             />
         </>
     );

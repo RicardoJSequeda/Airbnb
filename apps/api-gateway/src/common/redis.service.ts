@@ -70,4 +70,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (!this.client) return;
     await this.client.expire(key, seconds);
   }
+
+  /** Lock distribuido (SET key value EX ttl NX). Retorna true si se adquirió. */
+  async trySetNx(
+    key: string,
+    value: string,
+    ttlSeconds: number,
+  ): Promise<boolean> {
+    if (!this.client) return false;
+    const result = await this.client.set(key, value, 'EX', ttlSeconds, 'NX');
+    return result === 'OK';
+  }
 }

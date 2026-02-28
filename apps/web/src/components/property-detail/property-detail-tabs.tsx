@@ -46,4 +46,4 @@ export default function PropertyDetailTabs({
   )
 }
 
-export { TABS, type PropertyTabId }
+export { TABS }

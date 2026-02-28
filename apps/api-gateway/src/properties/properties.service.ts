@@ -1,7 +1,9 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
@@ -12,6 +14,8 @@ const PROPERTY_LIST_CACHE_TTL = 60;
 
 @Injectable()
 export class PropertiesService {
+  private readonly logger = new Logger(PropertiesService.name);
+
   constructor(
     private prisma: PrismaService,
     private redis: RedisService,
@@ -52,15 +56,19 @@ export class PropertiesService {
     if (filters?.propertyType) where.propertyType = filters.propertyType;
 
     const cacheKey = `properties:list:${where.organizationId ?? ''}:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.propertyType ?? ''}`;
-    if (this.redis.isAvailable()) {
-      const cached = await this.redis.get(cacheKey);
-      if (cached) {
-        try {
-          return JSON.parse(cached);
-        } catch {
-          /* invalid cache */
+    try {
+      if (this.redis.isAvailable()) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          try {
+            return JSON.parse(cached);
+          } catch {
+            /* invalid cache */
+          }
         }
       }
+    } catch {
+      /* Redis down: seguir con Prisma */
     }
 
     const properties = await this.prisma.property.findMany({
@@ -77,12 +85,16 @@ export class PropertiesService {
     });
 
     const result = properties.map((p) => this.formatProperty(p));
-    if (this.redis.isAvailable()) {
-      await this.redis.set(
-        cacheKey,
-        JSON.stringify(result),
-        PROPERTY_LIST_CACHE_TTL,
-      );
+    try {
+      if (this.redis.isAvailable()) {
+        await this.redis.set(
+          cacheKey,
+          JSON.stringify(result),
+          PROPERTY_LIST_CACHE_TTL,
+        );
+      }
+    } catch {
+      /* Redis down: ignorar cache */
     }
     return result;
   }
@@ -192,78 +204,103 @@ export class PropertiesService {
     country?: string;
     propertyType?: string;
   }) {
-    const where: any = { status: 'PUBLISHED' };
-    if (filters?.city) where.city = filters.city;
-    if (filters?.country) where.country = filters.country;
-    if (filters?.propertyType) where.propertyType = filters.propertyType;
+    try {
+      const where: any = { status: 'PUBLISHED' };
+      if (filters?.city) where.city = filters.city;
+      if (filters?.country) where.country = filters.country;
+      if (filters?.propertyType) where.propertyType = filters.propertyType;
 
-    const cacheKey = `public:properties:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.propertyType ?? ''}`;
-    if (this.redis.isAvailable()) {
-      const cached = await this.redis.get(cacheKey);
-      if (cached) {
-        try {
-          return JSON.parse(cached);
-        } catch {
-          /* invalid cache */
+      const cacheKey = `public:properties:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.propertyType ?? ''}`;
+      try {
+        if (this.redis.isAvailable()) {
+          const cached = await this.redis.get(cacheKey);
+          if (cached) {
+            try {
+              return JSON.parse(cached);
+            } catch {
+              /* invalid cache */
+            }
+          }
         }
+      } catch {
+        /* Redis down: seguir con Prisma */
       }
-    }
 
-    const properties = await this.prisma.property.findMany({
-      where,
-      include: {
-        host: {
-          select: {
-            id: true,
-            name: true,
-            avatar: true,
+      const properties = await this.prisma.property.findMany({
+        where,
+        include: {
+          host: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    const result = properties.map((p) => this.formatPropertyForPublic(p));
-    if (this.redis.isAvailable()) {
-      await this.redis.set(
-        cacheKey,
-        JSON.stringify(result),
-        PROPERTY_LIST_CACHE_TTL,
+      const result = properties.map((p) => this.formatPropertyForPublic(p));
+      try {
+        if (this.redis.isAvailable()) {
+          await this.redis.set(
+            cacheKey,
+            JSON.stringify(result),
+            PROPERTY_LIST_CACHE_TTL,
+          );
+        }
+      } catch {
+        /* Redis down: ignorar cache */
+      }
+      return result;
+    } catch (err) {
+      this.logger.warn(
+        `findAllPublic failed (returning []): ${err instanceof Error ? err.message : String(err)}`,
       );
+      return [];
     }
-    return result;
   }
 
   /** API pública: una propiedad PUBLISHED por id. Nunca expone organizationId. */
   async findOnePublic(id: string) {
-    const property = await this.prisma.property.findFirst({
-      where: { id, status: 'PUBLISHED' },
-      include: {
-        host: {
-          select: {
-            id: true,
-            name: true,
-            avatar: true,
-            email: true,
+    try {
+      const property = await this.prisma.property.findFirst({
+        where: { id, status: 'PUBLISHED' },
+        include: {
+          host: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+              email: true,
+            },
           },
-        },
-        reviews: {
-          include: {
-            guest: {
-              select: {
-                name: true,
-                avatar: true,
+          reviews: {
+            include: {
+              guest: {
+                select: {
+                  name: true,
+                  avatar: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      });
 
-    if (!property) {
-      throw new NotFoundException('Property not found');
+      if (!property) {
+        throw new NotFoundException('Property not found');
+      }
+
+      return this.formatPropertyForPublic(property);
+    } catch (err) {
+      if (err instanceof NotFoundException) throw err;
+      this.logger.warn(
+        `findOnePublic failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw new ServiceUnavailableException(
+        'No se pudo conectar con la base de datos. Comprueba DATABASE_URL y que las tablas existan.',
+      );
     }
-
-    return this.formatPropertyForPublic(property);
   }
 
   private formatProperty(property: any) {
@@ -272,9 +309,19 @@ export class PropertiesService {
     return {
       ...rest,
       price: price != null ? Number(price) : price,
-      amenities: JSON.parse(amenities || '[]'),
-      images: JSON.parse(images || '[]'),
+      amenities: this.safeJsonParse(amenities, []),
+      images: this.safeJsonParse(images, []),
     };
+  }
+
+  private safeJsonParse(value: unknown, fallback: unknown): unknown {
+    if (value == null || value === '') return fallback;
+    try {
+      const s = typeof value === 'string' ? value : String(value);
+      return JSON.parse(s);
+    } catch {
+      return fallback;
+    }
   }
 
   /** Formato para API pública: omite organizationId, incluye averageRating y totalReviews. */
@@ -282,16 +329,15 @@ export class PropertiesService {
     const formatted = this.formatProperty(property);
     const { organizationId, ...publicData } = formatted;
 
-    const reviews = property.reviews ?? [];
+    const reviews = Array.isArray(property.reviews) ? property.reviews : [];
     const totalReviews = reviews.length;
+    const sum = reviews.reduce(
+      (acc: number, r: any) =>
+        acc + (typeof r?.rating === 'number' ? r.rating : 0),
+      0,
+    );
     const averageRating =
-      totalReviews > 0
-        ? Math.round(
-            (reviews.reduce((acc: number, r: any) => acc + r.rating, 0) /
-              totalReviews) *
-              10,
-          ) / 10
-        : 0;
+      totalReviews > 0 ? Math.round((sum / totalReviews) * 10) / 10 : 0;
 
     return {
       ...publicData,

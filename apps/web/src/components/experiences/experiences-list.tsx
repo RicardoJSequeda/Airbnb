@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
 import ExperienceCard from './experience-card'
@@ -11,27 +11,25 @@ interface ExperiencesListProps {
   title: string
   subtitle?: string
   showArrow?: boolean
-  /** Más padding superior en la primera sección (espaciado buscador ↔ contenido) */
-  isFirstSection?: boolean
 }
 
+/** Misma estructura que PropertyCarousel: section + fila título/flechas + contenedor scroll, con max-w y padding idénticos. */
 export default function ExperiencesList({
   experiences,
   title,
   subtitle,
   showArrow,
-  isFirstSection,
 }: ExperiencesListProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(true)
 
-  const checkScroll = () => {
+  const checkScroll = useCallback(() => {
     if (!scrollContainerRef.current) return
     const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current
-    setCanScrollLeft(scrollLeft > 0)
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10)
-  }
+    setCanScrollLeft(scrollLeft > 5)
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5)
+  }, [])
 
   const scroll = (direction: 'left' | 'right') => {
     if (!scrollContainerRef.current) return
@@ -42,16 +40,25 @@ export default function ExperiencesList({
     })
   }
 
+  useEffect(() => {
+    checkScroll()
+    const container = scrollContainerRef.current
+    if (!container) return
+    container.addEventListener('scroll', checkScroll, { passive: true })
+    return () => container.removeEventListener('scroll', checkScroll)
+  }, [checkScroll, experiences.length])
+
   if (experiences.length === 0) return null
 
+  const CONTAINER_CLASS = 'w-full max-w-[1824px] mx-auto px-6 md:px-10 lg:px-12'
+
   return (
-    <div
-      className={`max-w-[1824px] mx-auto px-6 md:px-10 lg:px-12 ${isFirstSection ? 'pt-10 pb-10' : 'py-10'}`}
-    >
-      <div className="flex items-center justify-between mb-5">
+    <section className="relative w-full min-w-0">
+      {/* Fila título + flechas: mismo contenedor centrado que Alojamientos */}
+      <div className={`flex items-center justify-between ${CONTAINER_CLASS} mb-4`}>
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-semibold text-secondary">{title}</h2>
+            <h2 className="text-[22px] font-semibold text-secondary">{title}</h2>
             {showArrow && (
               <Link
                 href="/experiences"
@@ -63,41 +70,63 @@ export default function ExperiencesList({
             )}
           </div>
           {subtitle && (
-            <p className="text-sm text-text-2 mt-1">{subtitle}</p>
+            <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="hidden sm:flex gap-2">
           <button
             onClick={() => scroll('left')}
             disabled={!canScrollLeft}
-            className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className={`
+              w-8 h-8 rounded-full bg-white border border-border-secondary
+              flex items-center justify-center
+              transition-all duration-200
+              ${!canScrollLeft ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md hover:scale-105 cursor-pointer'}
+            `}
             aria-label="Anterior"
           >
-            <ChevronLeft className="w-5 h-5 text-secondary" />
+            <ChevronLeft className="w-4 h-4 text-secondary" />
           </button>
           <button
             onClick={() => scroll('right')}
             disabled={!canScrollRight}
-            className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className={`
+              w-8 h-8 rounded-full bg-white border border-border-secondary
+              flex items-center justify-center
+              transition-all duration-200
+              ${!canScrollRight ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md hover:scale-105 cursor-pointer'}
+            `}
             aria-label="Siguiente"
           >
-            <ChevronRight className="w-5 h-5 text-secondary" />
+            <ChevronRight className="w-4 h-4 text-secondary" />
           </button>
         </div>
       </div>
 
-      <div
-        ref={scrollContainerRef}
-        onScroll={checkScroll}
-        className="flex gap-8 overflow-x-auto scrollbar-hide pb-4"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {experiences.map((experience) => (
-          <div key={experience.id} className="flex-shrink-0 w-[300px]">
-            <ExperienceCard experience={experience} />
-          </div>
-        ))}
+      {/* Contenedor del scroll: mismo max-w y padding que el carrusel de propiedades */}
+      <div className={`relative w-full ${CONTAINER_CLASS}`}>
+        <div
+          ref={scrollContainerRef}
+          className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory touch-pan-x min-w-0 pb-2"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {experiences.map((experience) => (
+            <div
+              key={experience.id}
+              className="
+                flex-shrink-0 snap-start
+                w-[calc(50%-8px)] min-w-[140px]
+                sm:w-[calc(33.333%-11px)]
+                md:w-[calc(25%-12px)]
+                lg:w-[calc(14.285%-14px)]
+                xl:w-[247px]
+              "
+            >
+              <ExperienceCard experience={experience} />
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </section>
   )
 }

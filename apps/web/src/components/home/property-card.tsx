@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Heart, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { favoritesApi } from "@/lib/api/favorites";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { useLoginModalStore } from "@/lib/stores/login-modal-store";
 import { toast } from "sonner";
 import type { PropertyCardDisplay } from "./property-carousel";
 
@@ -17,6 +18,7 @@ interface PropertyCardProps {
 const PropertyCard = ({ property }: PropertyCardProps) => {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const openLoginModal = useLoginModalStore((s) => s.open);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -42,7 +44,7 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isAuthenticated) {
-      router.push(`/login?redirect=/`);
+      openLoginModal("/");
       return;
     }
     if (savingFavorite) return;

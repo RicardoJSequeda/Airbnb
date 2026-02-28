@@ -20,9 +20,9 @@ export default function ExperienceWhatYouWillDo({
   if (steps.length === 0) return null
 
   return (
-    <section className="space-y-8">
-      <h2 className="text-xl font-semibold text-secondary">Qué harás</h2>
-      <div className="space-y-8">
+    <section className="border-t border-neutral-200 pt-8 space-y-4">
+      <h2 className="text-xl font-semibold text-neutral-900">Qué harás</h2>
+      <div className="space-y-6">
         {steps.map((step, index) => (
           <div key={index} className="flex gap-5">
             <div className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-gray-200">
@@ -41,8 +41,8 @@ export default function ExperienceWhatYouWillDo({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-secondary">{step.title}</h3>
-              <p className="mt-1 text-sm text-text-2 leading-relaxed">{step.description}</p>
+              <h3 className="font-semibold text-neutral-900">{step.title}</h3>
+              <p className="mt-1 text-sm text-neutral-600 leading-relaxed">{step.description}</p>
             </div>
           </div>
         ))}

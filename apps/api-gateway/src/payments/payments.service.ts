@@ -10,7 +10,7 @@ import { RedisService } from '../common/redis.service';
 import { StripeService } from './stripe.service';
 import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
-import { calculatePlatformFee } from '../common/commission.utils';
+import { calculatePlatformFee } from '../bookings/domain/booking-pricing.domain';
 
 const holdKey = (bookingId: string) => `booking:hold:${bookingId}`;
 
@@ -127,7 +127,7 @@ export class PaymentsService {
         this.configService.get<string>('PLATFORM_FEE_PERCENTAGE') ?? '0',
       ) || 0;
     const { platformFee, hostNet } = calculatePlatformFee(
-      payment.amount,
+      Number(payment.amount),
       feePercentage,
     );
 
@@ -370,8 +370,8 @@ export class PaymentsService {
       return;
     }
 
-    // Transición PENDING -> COMPLETED: calcular comisión una sola vez con Prisma.Decimal.
-    const totalAmount = payment.amount;
+    // Transición PENDING -> COMPLETED: comisión en dominio; Prisma.Decimal solo al persistir.
+    const totalAmount = Number(payment.amount);
     const feePercentage =
       parseFloat(
         this.configService.get<string>('PLATFORM_FEE_PERCENTAGE') ?? '0',

@@ -9,7 +9,6 @@ import {
   UseGuards,
   Request,
   Query,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { ExperiencesService } from './experiences.service';
 import { CreateExperienceDto } from './dto/create-experience.dto';
@@ -104,19 +103,12 @@ export class PublicExperiencesController {
     @Query('category') category?: string,
     @Query('minParticipants') minParticipants?: string,
   ) {
-    try {
-      return await this.experiencesService.findAllPublic({
-        city,
-        country,
-        category,
-        minParticipants: minParticipants ? parseInt(minParticipants, 10) : undefined,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      throw new InternalServerErrorException(
-        `Experiences: ${message}. Comprueba que la tabla "experiences" exista y DATABASE_URL apunte a la misma base donde ejecutaste la migración manual.`,
-      );
-    }
+    return this.experiencesService.findAllPublic({
+      city,
+      country,
+      category,
+      minParticipants: minParticipants ? parseInt(minParticipants, 10) : undefined,
+    });
   }
 
   @Get(':id')

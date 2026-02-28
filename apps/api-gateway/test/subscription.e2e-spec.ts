@@ -6,7 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma.service';
 import { GlobalExceptionFilter } from '../src/common/filters/global-exception.filter';
-import { SubscriptionStatus } from '@prisma/client';
+import { SubscriptionStatus } from '../src/common/prisma-enums';
 
 describe('SubscriptionGuard (e2e)', () => {
   let app: INestApplication<App>;

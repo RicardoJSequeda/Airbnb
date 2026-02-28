@@ -1,9 +1,10 @@
-import { IsEmail, IsString } from 'class-validator';
+import { IsEmail, IsString, MinLength } from 'class-validator';
 
 export class LoginDto {
-  @IsEmail()
+  @IsEmail(undefined, { message: 'Email no válido' })
   email: string;
 
   @IsString()
-  password: string;
+  @MinLength(1, { message: 'La contraseña es obligatoria' })
+  password: string; // Longitud mínima validada en frontend (8 para registro)
 }

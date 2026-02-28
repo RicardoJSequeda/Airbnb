@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -35,7 +35,7 @@ function haversineDistance(
   return R * c
 }
 
-export default function SearchResultsPage() {
+function SearchResultsContent() {
   const searchParams = useSearchParams()
   const city = searchParams.get('city') ?? ''
   const latParam = searchParams.get('lat')
@@ -204,6 +204,33 @@ export default function SearchResultsPage() {
 
       <Footer />
     </div>
+  )
+}
+
+function SearchResultsFallback() {
+  return (
+    <div className="min-h-screen flex flex-col pt-20">
+      <Header />
+      <div className="flex-1 max-w-[1824px] w-full mx-auto p-4 lg:p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-64" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-48 bg-gray-200 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  )
+}
+
+export default function SearchResultsPage() {
+  return (
+    <Suspense fallback={<SearchResultsFallback />}>
+      <SearchResultsContent />
+    </Suspense>
   )
 }
 

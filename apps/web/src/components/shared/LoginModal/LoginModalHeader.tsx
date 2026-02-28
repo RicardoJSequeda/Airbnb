@@ -22,9 +22,7 @@ export function LoginModalHeader({
       >
         {title}
       </h2>
-      <p className="text-lg font-semibold text-secondary mt-1">
-        {subtitle}
-      </p>
+      {subtitle ? <p className="text-sm text-tertiary mt-1">{subtitle}</p> : null}
     </div>
   )
 }

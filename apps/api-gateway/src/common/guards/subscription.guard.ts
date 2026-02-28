@@ -5,8 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { UserRole } from '@prisma/client';
-import { SubscriptionStatus } from '@prisma/client';
+import { UserRole, SubscriptionStatus } from '../prisma-enums';
 import { PrismaService } from '../prisma.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 

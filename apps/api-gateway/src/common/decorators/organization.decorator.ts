@@ -3,7 +3,7 @@ import {
   createParamDecorator,
   ExecutionContext,
 } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { UserRole } from '../prisma-enums';
 
 export const SKIP_ORGANIZATION_CHECK_KEY = 'skipOrganizationCheck';
 

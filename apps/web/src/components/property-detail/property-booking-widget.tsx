@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { getLocalDateString } from '@/lib/utils'
 import type { Property } from '@/types'
 
 interface PropertyBookingWidgetProps {
@@ -51,7 +52,7 @@ export default function PropertyBookingWidget({ property }: PropertyBookingWidge
               type="date"
               value={checkIn}
               onChange={(e) => setCheckIn(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
+              min={getLocalDateString()}
               className="w-full text-sm border-0 p-0 focus:ring-0"
             />
           </div>
@@ -63,7 +64,7 @@ export default function PropertyBookingWidget({ property }: PropertyBookingWidge
               type="date"
               value={checkOut}
               onChange={(e) => setCheckOut(e.target.value)}
-              min={checkIn || new Date().toISOString().split('T')[0]}
+              min={checkIn || getLocalDateString()}
               className="w-full text-sm border-0 p-0 focus:ring-0"
             />
           </div>

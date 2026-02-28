@@ -24,14 +24,18 @@ apiClient.interceptors.request.use(
   }
 )
 
-// Response interceptor para manejar errores
+// Response interceptor para manejar errores (401 = token inválido o expirado)
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      window.location.href = '/login'
+      const path = window.location.pathname
+      if (path !== '/login' && path !== '/register') {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        const redirect = encodeURIComponent(path + window.location.search)
+        window.location.href = redirect ? `/login?redirect=${redirect}` : '/login'
+      }
     }
     return Promise.reject(error)
   }
