@@ -7,7 +7,7 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-  schemas   = ["users", "listings", "bookings", "payments"]
+  schemas   = ["users", "listings", "bookings", "payments", "platform"]
 }
 
 enum UserRole {
@@ -314,7 +314,7 @@ model OutboxEvent {
   @@index([tenantId, regionId, processedAt])
   @@index([deadLetteredAt])
   @@map("outbox_events")
-  @@schema("bookings")
+  @@schema("platform")
 }
 
 model OutboxDeadLetter {
@@ -330,7 +330,7 @@ model OutboxDeadLetter {
   @@index([outboxEventId])
   @@index([failedAt])
   @@map("outbox_dead_letter")
-  @@schema("bookings")
+  @@schema("platform")
 }
 
 model IdempotencyRecord {
@@ -355,7 +355,7 @@ model IdempotencyRecord {
   @@index([method, path])
   @@index([tenantId, regionId, expiresAt])
   @@map("idempotency_records")
-  @@schema("payments")
+  @@schema("platform")
 }
 
 model BookingSummary {
@@ -413,7 +413,7 @@ model ConsumedEvent {
   @@unique([consumerGroup, eventId])
   @@index([topic, processedAt])
   @@map("consumed_events")
-  @@schema("payments")
+  @@schema("platform")
 }
 
 model Place {

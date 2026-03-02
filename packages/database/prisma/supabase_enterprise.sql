@@ -474,54 +474,92 @@ CREATE INDEX idx_payment_summaries_booking_id ON payments.payment_summaries (boo
 CREATE INDEX idx_payment_summaries_organization_id ON payments.payment_summaries (organization_id);
 
 CREATE TABLE platform.outbox_events (
-  event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  aggregate_id UUID NOT NULL,
-  aggregate_type VARCHAR(100) NOT NULL,
-  event_type VARCHAR(150) NOT NULL,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+  aggregate_id VARCHAR(255) NOT NULL,
+  aggregate_type VARCHAR(100),
+  event_type VARCHAR(150),
+  type VARCHAR(150) NOT NULL,
+  version VARCHAR(20) NOT NULL DEFAULT 'v1',
   payload JSONB NOT NULL,
+  correlation_id VARCHAR(255),
+  retry_count INT NOT NULL DEFAULT 0,
+  next_retry_at TIMESTAMPTZ,
+  last_error TEXT,
+  dead_lettered_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   processed_at TIMESTAMPTZ,
-  tenant_id UUID NOT NULL,
+  tenant_id VARCHAR(64) NOT NULL DEFAULT 'default',
   region_id VARCHAR(32) NOT NULL DEFAULT 'global'
 );
 
 CREATE INDEX idx_outbox_events_processed_at_nulls_first ON platform.outbox_events (processed_at NULLS FIRST);
-CREATE INDEX idx_outbox_events_aggregate_type_created_at ON platform.outbox_events (aggregate_type, created_at);
+CREATE INDEX idx_outbox_events_aggregate_type_created_at ON platform.outbox_events (type, created_at);
 CREATE INDEX idx_outbox_events_tenant_created_at ON platform.outbox_events (tenant_id, created_at);
 CREATE INDEX idx_outbox_events_tenant_id ON platform.outbox_events (tenant_id);
+CREATE INDEX idx_outbox_events_retry_next_retry_at ON platform.outbox_events (processed_at, next_retry_at);
+CREATE INDEX idx_outbox_events_dead_lettered_at ON platform.outbox_events (dead_lettered_at);
+
+CREATE TABLE platform.outbox_dead_letter (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outbox_event_id UUID NOT NULL,
+  aggregate_id VARCHAR(255) NOT NULL,
+  type VARCHAR(150) NOT NULL,
+  version VARCHAR(20) NOT NULL,
+  payload JSONB NOT NULL,
+  error_message TEXT NOT NULL,
+  failed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  tenant_id VARCHAR(64) NOT NULL DEFAULT 'default',
+  region_id VARCHAR(32) NOT NULL DEFAULT 'global',
+  CONSTRAINT fk_outbox_dead_letter_event FOREIGN KEY (outbox_event_id) REFERENCES platform.outbox_events(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_outbox_dead_letter_outbox_event_id ON platform.outbox_dead_letter (outbox_event_id);
+CREATE INDEX idx_outbox_dead_letter_failed_at ON platform.outbox_dead_letter (failed_at);
+CREATE INDEX idx_outbox_dead_letter_tenant_created_at_desc ON platform.outbox_dead_letter (tenant_id, failed_at DESC);
 
 CREATE TABLE platform.idempotency_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  scope_key VARCHAR(512) NOT NULL UNIQUE,
   idempotency_key VARCHAR(255) NOT NULL,
-  actor_id UUID NOT NULL,
+  actor_id VARCHAR(255) NOT NULL,
   operation VARCHAR(100) NOT NULL,
+  method VARCHAR(16) NOT NULL,
+  path VARCHAR(512) NOT NULL,
   payload_hash VARCHAR(128) NOT NULL,
+  response_code INT,
+  response_body JSONB,
   response_payload JSONB,
-  status VARCHAR(50) NOT NULL,
+  status VARCHAR(50),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   processed_at TIMESTAMPTZ,
   expires_at TIMESTAMPTZ NOT NULL,
-  tenant_id UUID NOT NULL,
+  tenant_id VARCHAR(64) NOT NULL DEFAULT 'default',
   region_id VARCHAR(32) NOT NULL DEFAULT 'global',
-  CONSTRAINT uq_idempotency_key_actor UNIQUE (idempotency_key, actor_id)
+  CONSTRAINT uq_idempotency_key_actor UNIQUE (idempotency_key, actor_id),
+  CONSTRAINT uq_idempotency_key_actor_operation UNIQUE (idempotency_key, actor_id, operation)
 );
 
 CREATE INDEX idx_idempotency_records_tenant_created_at_desc ON platform.idempotency_records (tenant_id, created_at DESC);
 CREATE INDEX idx_idempotency_records_expires_at ON platform.idempotency_records (expires_at);
 CREATE INDEX idx_idempotency_records_status ON platform.idempotency_records (status);
 CREATE INDEX idx_idempotency_records_tenant_id ON platform.idempotency_records (tenant_id);
+CREATE INDEX idx_idempotency_records_method_path ON platform.idempotency_records (method, path);
 
 CREATE TABLE platform.consumed_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  event_id UUID NOT NULL,
-  consumer_name VARCHAR(100) NOT NULL,
+  consumer_group VARCHAR(100) NOT NULL,
+  consumer_name VARCHAR(100),
+  event_id VARCHAR(255) NOT NULL,
+  topic VARCHAR(255) NOT NULL,
   processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  tenant_id UUID NOT NULL,
+  tenant_id VARCHAR(64) NOT NULL DEFAULT 'default',
   region_id VARCHAR(32) NOT NULL DEFAULT 'global',
-  CONSTRAINT uq_consumed_event_consumer UNIQUE (event_id, consumer_name),
-  CONSTRAINT fk_consumed_events_outbox_event FOREIGN KEY (event_id) REFERENCES platform.outbox_events(event_id) ON DELETE CASCADE
+  CONSTRAINT uq_consumed_event_consumer UNIQUE (event_id, consumer_group)
 );
 
 CREATE INDEX idx_consumed_events_tenant_id ON platform.consumed_events (tenant_id);
 CREATE INDEX idx_consumed_events_tenant_created_at_desc ON platform.consumed_events (tenant_id, processed_at DESC);
 CREATE INDEX idx_consumed_events_event_id ON platform.consumed_events (event_id);
+CREATE INDEX idx_consumed_events_topic_processed_at ON platform.consumed_events (topic, processed_at);
