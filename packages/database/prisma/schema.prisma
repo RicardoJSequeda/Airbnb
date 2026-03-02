@@ -7,7 +7,11 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+  schemas   = ["users", "listings", "bookings", "payments", "platform"]
+
   schemas   = ["users", "listings", "bookings", "payments"]
+ main
 }
 
 enum UserRole {
@@ -177,6 +181,8 @@ model Booking {
   guest          User          @relation("GuestBookings", fields: [guestId], references: [id], onDelete: Cascade)
   organizationId String
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenantId       String        @default("default")
+  regionId       String        @default("global")
   checkIn        DateTime
   checkOut       DateTime
   guests         Int
@@ -204,6 +210,10 @@ model Payment {
   bookingId             String        @unique
   organizationId        String
   organization          Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+  tenantId              String        @default("default")
+  regionId              String        @default("global")
+ main
   amount                Decimal       @db.Decimal(10, 2)
   currency              String        @default("usd")
   stripePaymentIntentId String?       @unique
@@ -219,6 +229,7 @@ model Payment {
 
   @@index([bookingId])
   @@index([organizationId])
+  @@index([tenantId, regionId])
   @@map("payments")
   @@schema("payments")
 }
@@ -288,12 +299,21 @@ model City {
 // ==================== OUTBOX EVENTS ====================
 model OutboxEvent {
   id             String    @id @default(uuid())
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+  eventId        String    @unique @default(uuid())
+ main
   aggregateId    String
   type           String
   version        String    @default("v1")
   payload        Json
   correlationId  String?
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+  tenantId       String    @default("default")
+  regionId       String    @default("global")
+  retryCount     Int       @default(0)
+
   attempts       Int       @default(0)
+ main
   nextRetryAt    DateTime?
   lastError      String?
   deadLetteredAt DateTime?
@@ -303,9 +323,16 @@ model OutboxEvent {
   @@index([aggregateId])
   @@index([type])
   @@index([processedAt, nextRetryAt])
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+  @@index([tenantId, regionId, processedAt])
+  @@index([deadLetteredAt])
+  @@map("outbox_events")
+  @@schema("platform")
+
   @@index([deadLetteredAt])
   @@map("outbox_events")
   @@schema("bookings")
+ main
 }
 
 model OutboxDeadLetter {
@@ -321,12 +348,22 @@ model OutboxDeadLetter {
   @@index([outboxEventId])
   @@index([failedAt])
   @@map("outbox_dead_letter")
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+  @@schema("platform")
+
   @@schema("bookings")
+ main
 }
 
 model IdempotencyRecord {
   id             String   @id @default(uuid())
   scopeKey       String   @unique
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+  actorId        String
+  operation      String
+  tenantId       String   @default("default")
+  regionId       String   @default("global")
+> main
   method         String
   path           String
   idempotencyKey String
@@ -337,10 +374,77 @@ model IdempotencyRecord {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+  @@unique([idempotencyKey, actorId, operation])
+  @@index([expiresAt])
+  @@index([method, path])
+  @@index([tenantId, regionId, expiresAt])
+  @@map("idempotency_records")
+  @@schema("platform")
+}
+
+model BookingSummary {
+  id             String   @id @default(uuid())
+  bookingId      String   @unique
+  propertyId     String
+  guestId        String
+  hostId         String
+  organizationId String
+  tenantId       String   @default("default")
+  regionId       String   @default("global")
+  status         String
+  paymentStatus  String?
+  totalPrice     Decimal  @db.Decimal(10, 2)
+  checkIn        DateTime
+  checkOut       DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([guestId, createdAt])
+  @@index([hostId, createdAt])
+  @@index([tenantId, regionId, createdAt])
+  @@map("booking_summaries")
+  @@schema("bookings")
+}
+
+model PaymentSummary {
+  id                    String    @id @default(uuid())
+  paymentId             String    @unique
+  bookingId             String    @unique
+  organizationId        String
+  tenantId              String    @default("default")
+  regionId              String    @default("global")
+  status                String
+  amount                Decimal   @db.Decimal(10, 2)
+  currency              String
+  stripePaymentIntentId String?
+  paidAt                DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@index([tenantId, regionId, createdAt])
+  @@map("payment_summaries")
+  @@schema("payments")
+}
+
+model ConsumedEvent {
+  id            String   @id @default(uuid())
+  consumerGroup String
+  eventId       String
+  topic         String
+  processedAt   DateTime @default(now())
+
+  @@unique([consumerGroup, eventId])
+  @@index([topic, processedAt])
+  @@map("consumed_events")
+  @@schema("platform")
+
   @@index([expiresAt])
   @@index([method, path])
   @@map("idempotency_records")
   @@schema("payments")
+ main
 }
 
 model Place {
@@ -371,7 +475,6 @@ model LocationSearchLog {
   @@schema("listings")
 }
 
-// ==================== EXPERIENCE SCHEMA ====================
 model Experience {
   id                  String  @id @default(uuid())
   title               String
@@ -475,6 +578,10 @@ model ExperiencePayment {
   bookingId             String        @unique
   organizationId        String
   organization          Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+  tenantId              String        @default("default")
+  regionId              String        @default("global")
+ main
   amount                Decimal       @db.Decimal(10, 2)
   currency              String        @default("usd")
   stripePaymentIntentId String?       @unique
@@ -513,7 +620,7 @@ model ExperienceReview {
   @@schema("listings")
 }
 
-// ==================== FAVORITE SCHEMA ====================
+
 model Favorite {
   id         String   @id @default(uuid())
   userId     String

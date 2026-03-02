@@ -5,17 +5,35 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+import { PrismaOutboxClient } from './infrastructure/prisma-outbox.client';
+import { KafkaPublisherService } from './kafka.publisher.service';
+import { ConsumerRegistryService } from './consumers/consumer-registry.service';
+import { MetricsService } from '../observability/metrics.service';
+
+interface OutboxEventRecord {
+  id: string;
+  eventId: string;
+
 import { PrismaService } from '../../common/prisma.service';
 import { KafkaPublisherService } from './kafka.publisher.service';
 
 interface OutboxEventRecord {
   id: string;
+ main
   aggregateId: string;
   type: string;
   version?: string;
   payload: unknown;
   correlationId?: string;
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+  tenantId?: string;
+  regionId?: string;
+  retryCount?: number;
+  createdAt?: Date;
+
   attempts?: number;
+ main
 }
 
 @Injectable()
@@ -30,8 +48,15 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
   private readonly maxDelayMs: number;
 
   constructor(
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+    private readonly prisma: PrismaOutboxClient,
+    private readonly kafkaPublisher: KafkaPublisherService,
+    private readonly consumerRegistry: ConsumerRegistryService,
+    private readonly metrics: MetricsService,
+
     private readonly prisma: PrismaService,
     private readonly kafkaPublisher: KafkaPublisherService,
+ main
     private readonly configService: ConfigService,
   ) {
     this.batchSize = Number(configService.get('OUTBOX_RELAY_BATCH_SIZE') ?? 50);
@@ -42,7 +67,13 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {
     const enabled =
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+      this.configService.get<string>('OUTBOX_RELAY_ENABLED') !== 'false' &&
+      this.configService.get<string>('PROCESS_ROLE') === 'worker' &&
+      this.configService.get<string>('OUTBOX_WORKER_ENABLED') !== 'false';
+
       this.configService.get<string>('OUTBOX_RELAY_ENABLED') !== 'false';
+ main
 
     if (!enabled) {
       this.logger.log('Outbox relay disabled by configuration');
@@ -74,7 +105,11 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
     try {
       let hasMore = true;
       while (hasMore) {
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+        const batch = await this.fetchBatchWithLock(this.batchSize);
+
         const batch = await this.fetchBatch(this.batchSize);
+ main
         hasMore = batch.length === this.batchSize;
 
         for (const event of batch) {
@@ -95,6 +130,47 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
       outboxDeadLetter?: {
         create: (args: unknown) => Promise<unknown>;
       };
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+      $queryRawUnsafe: <T>(query: string, ...params: unknown[]) => Promise<T>;
+    };
+  }
+
+  private async fetchBatchWithLock(
+    limit: number,
+  ): Promise<OutboxEventRecord[]> {
+    const rows = await this.prismaOutbox.$queryRawUnsafe<{ id: string }[]>(
+      `SELECT id
+       FROM bookings.outbox_events
+       WHERE "processedAt" IS NULL
+         AND "deadLetteredAt" IS NULL
+         AND "retryCount" < $1
+         AND ("nextRetryAt" IS NULL OR "nextRetryAt" <= NOW())
+       ORDER BY "createdAt" ASC
+       FOR UPDATE SKIP LOCKED
+       LIMIT $2`,
+      this.maxAttempts,
+      limit,
+    );
+
+    if (!rows.length) {
+      return [];
+    }
+
+    return this.prisma.outboxEvent.findMany({
+      where: { id: { in: rows.map((r) => r.id) } },
+    }) as unknown as Promise<OutboxEventRecord[]>;
+  }
+
+  private async processEvent(event: OutboxEventRecord): Promise<void> {
+    const topicName = `${event.type}.${event.version ?? 'v1'}`;
+    try {
+      await this.kafkaPublisher.publish({
+        topic: topicName,
+        key: event.aggregateId,
+        version: event.version ?? 'v1',
+        correlationId: event.correlationId,
+        regionId: event.regionId,
+
     };
   }
 
@@ -129,13 +205,31 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
         key: event.aggregateId,
         version: event.version ?? 'v1',
         correlationId: event.correlationId,
+ main
         payload:
           typeof event.payload === 'object' && event.payload !== null
             ? (event.payload as Record<string, unknown>)
             : { value: event.payload },
       });
 
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+      await this.consumerRegistry.dispatch({
+        eventId: event.eventId,
+        topic: topicName,
+        payload:
+          typeof event.payload === 'object' && event.payload !== null
+            ? (event.payload as Record<string, unknown>)
+            : { value: event.payload },
+        correlationId: event.correlationId,
+        tenantId: (event as { tenantId?: string }).tenantId,
+        regionId: (event as { regionId?: string }).regionId,
+      });
+
+      this.metrics.inc('outbox_processed_total');
+      await this.prisma.outboxEvent.update({
+
       await outbox.update({
+ main
         where: { id: event.id },
         data: {
           processedAt: new Date(),
@@ -143,6 +237,31 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
         },
       });
     } catch (error) {
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+      const retryCount = (event.retryCount ?? 0) + 1;
+      this.metrics.inc('outbox_retry_total');
+      const message = error instanceof Error ? error.message : String(error);
+
+      if (retryCount >= this.maxAttempts) {
+        await this.sendToDeadLetter(event, message);
+        await this.consumerRegistry.dispatch({
+          eventId: event.eventId,
+          topic: topicName,
+          payload:
+            typeof event.payload === 'object' && event.payload !== null
+              ? (event.payload as Record<string, unknown>)
+              : { value: event.payload },
+          correlationId: event.correlationId,
+          tenantId: (event as { tenantId?: string }).tenantId,
+          regionId: (event as { regionId?: string }).regionId,
+        });
+
+        this.metrics.inc('outbox_processed_total');
+        await this.prisma.outboxEvent.update({
+          where: { id: event.id },
+          data: {
+            retryCount,
+
       const attempts = (event.attempts ?? 0) + 1;
       const message = error instanceof Error ? error.message : String(error);
 
@@ -152,6 +271,7 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
           where: { id: event.id },
           data: {
             attempts,
+ main
             lastError: message,
             deadLetteredAt: new Date(),
           },
@@ -160,19 +280,54 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
       }
 
       const nextRetryAt = new Date(
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+        Date.now() + this.calculateBackoff(retryCount - 1),
+      );
+      await this.consumerRegistry.dispatch({
+        eventId: event.eventId,
+        topic: topicName,
+        payload:
+          typeof event.payload === 'object' && event.payload !== null
+            ? (event.payload as Record<string, unknown>)
+            : { value: event.payload },
+        correlationId: event.correlationId,
+        tenantId: (event as { tenantId?: string }).tenantId,
+        regionId: (event as { regionId?: string }).regionId,
+      });
+
+      this.metrics.inc('outbox_processed_total');
+      await this.prisma.outboxEvent.update({
+        where: { id: event.id },
+        data: {
+          retryCount,
+
         Date.now() + this.calculateBackoff(attempts - 1),
       );
       await outbox.update({
         where: { id: event.id },
         data: {
           attempts,
+ main
           lastError: message,
           nextRetryAt,
         },
       });
 
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+      this.metrics.setGauge(
+        'outbox_lag_seconds',
+        Math.max(
+          0,
+          (Date.now() - new Date(event['createdAt'] ?? Date.now()).getTime()) /
+            1000,
+        ),
+      );
+      this.logger.warn(
+        `Outbox event retry scheduled event=${event.id} retryCount=${retryCount} nextRetryAt=${nextRetryAt.toISOString()} reason=${message}`,
+
       this.logger.warn(
         `Outbox event retry scheduled event=${event.id} attempts=${attempts} nextRetryAt=${nextRetryAt.toISOString()} reason=${message}`,
+ main
       );
     }
   }
@@ -181,6 +336,9 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
     event: OutboxEventRecord,
     errorMessage: string,
   ): Promise<void> {
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+    await this.prisma.outboxDeadLetter.create({
+
     const deadLetter = this.prismaOutbox.outboxDeadLetter;
     if (!deadLetter?.create) {
       this.logger.error(
@@ -190,6 +348,7 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
     }
 
     await deadLetter.create({
+ main
       data: {
         outboxEventId: event.id,
         aggregateId: event.aggregateId,
@@ -202,6 +361,24 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
         errorMessage,
       },
     });
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+
+    await this.kafkaPublisher.publishDeadLetter(
+      {
+        topic: `${event.type}.${event.version ?? 'v1'}`,
+        key: event.aggregateId,
+        payload:
+          typeof event.payload === 'object' && event.payload !== null
+            ? (event.payload as Record<string, unknown>)
+            : { value: event.payload },
+        version: event.version ?? 'v1',
+        correlationId: event.correlationId,
+        regionId: event.regionId,
+      },
+      errorMessage,
+    );
+
+ main
   }
 
   private calculateBackoff(attempt: number): number {

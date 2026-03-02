@@ -1,8 +1,20 @@
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+import {
+  assertMetadata,
+  assertNumber,
+  assertString,
+  enforceEventEnvelope,
+  type BaseIntegrationEvent,
+} from '../../../shared-kernel/events/base-integration.event';
+
+export const PAYMENT_CAPTURED_V1_TOPIC = 'payment.captured.v1';
+
 export interface PaymentEventMetadataV1 {
   eventId: string;
   occurredAt: string;
   correlationId: string;
 }
+ main
 
 export interface PaymentCapturedV1Payload {
   paymentId: string;
@@ -14,9 +26,43 @@ export interface PaymentCapturedV1Payload {
   capturedAt: string;
 }
 
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+export type PaymentCapturedV1Event = BaseIntegrationEvent<
+  'payment.captured',
+  PaymentCapturedV1Payload
+>;
+
+export function parsePaymentCapturedV1Event(
+  input: unknown,
+): PaymentCapturedV1Event {
+  const event = enforceEventEnvelope(input, 'payment.captured');
+  const payload = event.payload as Record<string, unknown>;
+
+  return {
+    name: 'payment.captured',
+    version: 'v1',
+    metadata: assertMetadata(event.metadata),
+    payload: {
+      paymentId: assertString(payload.paymentId, 'payload.paymentId'),
+      bookingId: assertString(payload.bookingId, 'payload.bookingId'),
+      organizationId: assertString(
+        payload.organizationId,
+        'payload.organizationId',
+      ),
+      amount: assertNumber(payload.amount, 'payload.amount'),
+      currency: assertString(payload.currency, 'payload.currency'),
+      stripePaymentIntentId: assertString(
+        payload.stripePaymentIntentId,
+        'payload.stripePaymentIntentId',
+      ),
+      capturedAt: assertString(payload.capturedAt, 'payload.capturedAt'),
+    },
+  };
+
 export interface PaymentCapturedV1Event {
   name: 'payment.captured';
   version: 'v1';
   metadata: PaymentEventMetadataV1;
   payload: PaymentCapturedV1Payload;
+ main
 }

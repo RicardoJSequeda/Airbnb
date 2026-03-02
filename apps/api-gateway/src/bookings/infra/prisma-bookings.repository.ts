@@ -4,7 +4,7 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma.service';
+import { PrismaBookingsClient } from '../../contexts/bookings/infrastructure/prisma-bookings.client';
 import type {
   IBookingsRepository,
   PropertySnapshot,
@@ -21,7 +21,7 @@ const HOLD_KEY_PREFIX = 'booking:hold:';
 @Injectable()
 export class PrismaBookingsRepository implements IBookingsRepository {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly prisma: PrismaBookingsClient,
     @Inject('IRedisPort') private readonly redisPort: IRedisPort,
   ) {}
 
@@ -112,6 +112,7 @@ export class PrismaBookingsRepository implements IBookingsRepository {
                 city: true,
                 country: true,
                 images: true,
+                hostId: true,
               },
             },
             guest: {
@@ -133,6 +134,28 @@ export class PrismaBookingsRepository implements IBookingsRepository {
             currency: 'usd',
             stripePaymentIntentId: paymentIntentId,
             status: 'PENDING',
+          },
+        });
+
+        await tx.bookingSummary.upsert({
+          where: { bookingId: b.id },
+          create: {
+            bookingId: b.id,
+            propertyId: b.propertyId,
+            guestId: b.guestId,
+            hostId: b.property.hostId,
+            organizationId: b.organizationId,
+            tenantId: 'default',
+            regionId: 'global',
+            status: b.status,
+            paymentStatus: 'PENDING',
+            totalPrice: booking.totalPrice,
+            checkIn: b.checkIn,
+            checkOut: b.checkOut,
+          },
+          update: {
+            status: b.status,
+            paymentStatus: 'PENDING',
           },
         });
 
@@ -219,6 +242,11 @@ export class PrismaBookingsRepository implements IBookingsRepository {
       await tx.booking.update({
         where: { id },
         data: { status: status as any },
+      });
+
+      await tx.bookingSummary.updateMany({
+        where: { bookingId: id },
+        data: { status },
       });
 
       const outboxEvents = events ?? [];

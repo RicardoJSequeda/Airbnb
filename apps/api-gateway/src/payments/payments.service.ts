@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../common/prisma.service';
+import { PrismaPaymentsClient } from '../contexts/payments/infrastructure/prisma-payments.client';
 import { RedisService } from '../common/redis.service';
 import { StripeService } from './stripe.service';
 import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
@@ -17,7 +17,7 @@ const holdKey = (bookingId: string) => `booking:hold:${bookingId}`;
 @Injectable()
 export class PaymentsService {
   constructor(
-    private prisma: PrismaService,
+    private prisma: PrismaPaymentsClient,
     private redis: RedisService,
     private stripeService: StripeService,
     private configService: ConfigService,
