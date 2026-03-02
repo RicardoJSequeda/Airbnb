@@ -50,4 +50,11 @@ export function parseBookingCreatedV1Event(
       currency: assertString(payload.currency, 'payload.currency'),
     },
   };
+
+export interface BookingCreatedV1Event {
+  name: 'booking.created';
+  version: 'v1';
+  metadata: EventMetadataV1;
+  payload: BookingCreatedV1Payload;
+ main
 }

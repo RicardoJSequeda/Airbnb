@@ -1,3 +1,4 @@
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
 import {
   assertMetadata,
   assertNumber,
@@ -7,6 +8,13 @@ import {
 } from '../../../shared-kernel/events/base-integration.event';
 
 export const PAYMENT_CAPTURED_V1_TOPIC = 'payment.captured.v1';
+
+export interface PaymentEventMetadataV1 {
+  eventId: string;
+  occurredAt: string;
+  correlationId: string;
+}
+ main
 
 export interface PaymentCapturedV1Payload {
   paymentId: string;
@@ -18,6 +26,7 @@ export interface PaymentCapturedV1Payload {
   capturedAt: string;
 }
 
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
 export type PaymentCapturedV1Event = BaseIntegrationEvent<
   'payment.captured',
   PaymentCapturedV1Payload
@@ -49,4 +58,11 @@ export function parsePaymentCapturedV1Event(
       capturedAt: assertString(payload.capturedAt, 'payload.capturedAt'),
     },
   };
+
+export interface PaymentCapturedV1Event {
+  name: 'payment.captured';
+  version: 'v1';
+  metadata: PaymentEventMetadataV1;
+  payload: PaymentCapturedV1Payload;
+ main
 }
