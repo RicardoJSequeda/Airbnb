@@ -16,6 +16,8 @@ export class PaymentCapturedConsumer implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
+    if (process.env.PROCESS_ROLE !== 'worker') return;
+
     this.registry.register({
       consumerGroup: this.consumerGroup,
       topic: PAYMENT_CAPTURED_V1_TOPIC,

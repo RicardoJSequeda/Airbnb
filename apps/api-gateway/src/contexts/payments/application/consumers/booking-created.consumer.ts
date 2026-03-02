@@ -16,6 +16,8 @@ export class BookingCreatedConsumer implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
+    if (process.env.PROCESS_ROLE !== 'worker') return;
+
     this.registry.register({
       consumerGroup: this.consumerGroup,
       topic: BOOKING_CREATED_V1_TOPIC,

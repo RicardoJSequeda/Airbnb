@@ -4,6 +4,8 @@ import {
   ExternalAdapterResilienceService,
   type AdapterPolicy,
 } from '../resilience/external-adapter-resilience.service';
+import { MetricsService } from '../observability/metrics.service';
+import { TraceContextService } from '../observability/trace-context.service';
 
 export interface IntegrationEvent<TPayload = Record<string, unknown>> {
   topic: string;
@@ -11,6 +13,7 @@ export interface IntegrationEvent<TPayload = Record<string, unknown>> {
   payload: TPayload;
   version?: string;
   correlationId?: string;
+  regionId?: string;
 }
 
 @Injectable()
@@ -21,6 +24,8 @@ export class KafkaPublisherService {
   constructor(
     private readonly resilience: ExternalAdapterResilienceService,
     private readonly configService: ConfigService,
+    private readonly metrics: MetricsService,
+    private readonly traceContext: TraceContextService,
   ) {
     this.policy = {
       timeoutMs: Number(configService.get('KAFKA_TIMEOUT_MS') ?? 5000),
@@ -33,23 +38,55 @@ export class KafkaPublisherService {
     };
   }
 
+  toRegionalTopic(topic: string, regionId?: string): string {
+    const region =
+      regionId ?? this.configService.get<string>('REGION_ID') ?? 'global';
+    return `${region}.${topic}`;
+  }
+
   async publish(event: IntegrationEvent): Promise<void> {
+    const regionalTopic = this.toRegionalTopic(event.topic, event.regionId);
+
     await this.resilience.execute(
       'kafka-publisher',
       async () => {
-        // Placeholder adapter for Event-Driven evolution.
-        // Real Kafka producer integration should be plugged here.
         this.logger.debug(
-          `Publishing event topic=${event.topic} version=${event.version ?? 'v1'} key=${event.key} correlationId=${event.correlationId ?? 'n/a'}`,
+          `Publishing event topic=${regionalTopic} version=${event.version ?? 'v1'} key=${event.key} traceId=${this.traceContext.getTraceId()} correlationId=${event.correlationId ?? this.traceContext.getCorrelationId()}`,
         );
         await Promise.resolve();
       },
       this.policy,
     );
 
-    const metrics = this.resilience.getMetrics('kafka-publisher');
-    this.logger.verbose(
-      `kafka metrics calls=${metrics.calls} failures=${metrics.failures} retries=${metrics.retries} timeouts=${metrics.timeouts}`,
-    );
+    this.metrics.inc('kafka_publish_total');
+  }
+
+  async publishDeadLetter(
+    event: IntegrationEvent,
+    errorMessage: string,
+  ): Promise<void> {
+    const deadLetterTopic = `${event.topic}.dlq`;
+    this.metrics.inc('kafka_dead_letter_total');
+    await this.publish({
+      ...event,
+      topic: deadLetterTopic,
+      payload: {
+        originalPayload: event.payload,
+        errorMessage,
+      } as Record<string, unknown>,
+    });
+  }
+
+  async checkHealth(): Promise<boolean> {
+    try {
+      await this.publish({
+        topic: 'platform.health.v1',
+        key: 'health-check',
+        payload: { ts: new Date().toISOString() },
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

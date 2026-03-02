@@ -72,6 +72,8 @@ export class IdempotencyService implements OnModuleInit, OnModuleDestroy {
   async reserve(params: {
     actorId: string;
     operation: string;
+    tenantId?: string;
+    regionId?: string;
     method: string;
     path: string;
     key: string;
@@ -117,6 +119,8 @@ export class IdempotencyService implements OnModuleInit, OnModuleDestroy {
         scopeKey,
         actorId: params.actorId,
         operation: params.operation,
+        tenantId: params.tenantId ?? 'default',
+        regionId: params.regionId ?? 'global',
         method: params.method.toUpperCase(),
         path: params.path,
         idempotencyKey: params.key,

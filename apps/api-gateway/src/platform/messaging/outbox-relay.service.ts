@@ -143,6 +143,7 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
         key: event.aggregateId,
         version: event.version ?? 'v1',
         correlationId: event.correlationId,
+        regionId: event.regionId,
         payload:
           typeof event.payload === 'object' && event.payload !== null
             ? (event.payload as Record<string, unknown>)
@@ -256,6 +257,21 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
         errorMessage,
       },
     });
+
+    await this.kafkaPublisher.publishDeadLetter(
+      {
+        topic: `${event.type}.${event.version ?? 'v1'}`,
+        key: event.aggregateId,
+        payload:
+          typeof event.payload === 'object' && event.payload !== null
+            ? (event.payload as Record<string, unknown>)
+            : { value: event.payload },
+        version: event.version ?? 'v1',
+        correlationId: event.correlationId,
+        regionId: event.regionId,
+      },
+      errorMessage,
+    );
   }
 
   private calculateBackoff(attempt: number): number {

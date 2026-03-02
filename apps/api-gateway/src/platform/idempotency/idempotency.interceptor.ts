@@ -58,6 +58,10 @@ export class IdempotencyInterceptor implements NestInterceptor {
     }
 
     const actorId = request.user?.userId ?? 'anonymous';
+    const tenantId =
+      (request.headers?.['x-tenant-id'] as string | undefined) ?? 'default';
+    const regionId =
+      (request.headers?.['x-region-id'] as string | undefined) ?? 'global';
     const ttlSeconds =
       this.reflector.getAllAndOverride<number>(IDEMPOTENCY_TTL_SECONDS_KEY, [
         context.getHandler(),
@@ -77,6 +81,8 @@ export class IdempotencyInterceptor implements NestInterceptor {
         key,
         payloadHash,
         ttlSeconds,
+        tenantId,
+        regionId,
       }),
     ).pipe(
       mergeMap((result) => {

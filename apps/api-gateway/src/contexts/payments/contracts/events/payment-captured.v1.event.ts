@@ -2,6 +2,7 @@ import {
   assertMetadata,
   assertNumber,
   assertString,
+  enforceEventEnvelope,
   type BaseIntegrationEvent,
 } from '../../../shared-kernel/events/base-integration.event';
 
@@ -25,7 +26,7 @@ export type PaymentCapturedV1Event = BaseIntegrationEvent<
 export function parsePaymentCapturedV1Event(
   input: unknown,
 ): PaymentCapturedV1Event {
-  const event = input as Record<string, unknown>;
+  const event = enforceEventEnvelope(input, 'payment.captured');
   const payload = event.payload as Record<string, unknown>;
 
   return {

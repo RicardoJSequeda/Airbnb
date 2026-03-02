@@ -2,6 +2,7 @@ import {
   assertMetadata,
   assertNumber,
   assertString,
+  enforceEventEnvelope,
   type BaseIntegrationEvent,
 } from '../../../shared-kernel/events/base-integration.event';
 
@@ -27,7 +28,7 @@ export type BookingCreatedV1Event = BaseIntegrationEvent<
 export function parseBookingCreatedV1Event(
   input: unknown,
 ): BookingCreatedV1Event {
-  const event = input as Record<string, unknown>;
+  const event = enforceEventEnvelope(input, 'booking.created');
   const payload = event.payload as Record<string, unknown>;
 
   return {
