@@ -26,19 +26,56 @@ export class ExperiencesService {
     hostId: string,
     organizationId: string,
   ) {
-    const { includes, excludes, images, languages, ...rest } = createExperienceDto;
+    const { includes, excludes, images, languages, ...rest } =
+      createExperienceDto;
 
-    const experience = await this.prisma.experience.create({
-      data: {
-        ...rest,
-        hostId,
-        organizationId,
-        includes: JSON.stringify(includes ?? []),
-        excludes: excludes ? JSON.stringify(excludes) : null,
-        images: JSON.stringify(images ?? []),
-        languages: languages ? JSON.stringify(languages) : null,
-        status: 'DRAFT',
-      },
+    const experience = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.experience.create({
+        data: {
+          ...rest,
+          hostId,
+          organizationId,
+          includes: JSON.stringify(includes ?? []),
+          excludes: excludes ? JSON.stringify(excludes) : null,
+          images: JSON.stringify(images ?? []),
+          languages: languages ? JSON.stringify(languages) : null,
+          status: 'DRAFT',
+        },
+      });
+
+      if (includes?.length) {
+        await tx.experienceInclude.createMany({
+          data: includes.map((itemText) => ({
+            experienceId: created.id,
+            itemText,
+          })),
+        });
+      }
+
+      if (images?.length) {
+        await tx.experienceImage.createMany({
+          data: images.map((imageUrl, index) => ({
+            experienceId: created.id,
+            imageUrl,
+            displayOrder: index,
+            isCover: index === 0,
+          })),
+        });
+      }
+
+      if (languages?.length) {
+        await tx.experienceLanguage.createMany({
+          data: languages.map((languageCode) => ({
+            experienceId: created.id,
+            languageCode,
+          })),
+        });
+      }
+
+      return tx.experience.findUniqueOrThrow({
+        where: { id: created.id },
+        include: this.experienceRelationsInclude(),
+      });
     });
 
     return this.formatExperience(experience);
@@ -75,7 +112,7 @@ export class ExperiencesService {
 
     const experiences = await this.prisma.experience.findMany({
       where,
-      include: {
+      include: this.experienceRelationsInclude({
         host: {
           select: {
             id: true,
@@ -83,7 +120,7 @@ export class ExperiencesService {
             avatar: true,
           },
         },
-      },
+      }),
     });
 
     const result = experiences.map((e) => this.formatExperience(e));
@@ -103,7 +140,7 @@ export class ExperiencesService {
 
     const experience = await this.prisma.experience.findFirst({
       where,
-      include: {
+      include: this.experienceRelationsInclude({
         host: {
           select: {
             id: true,
@@ -111,7 +148,7 @@ export class ExperiencesService {
             avatar: true,
           },
         },
-      },
+      }),
     });
 
     if (!experience) {
@@ -139,7 +176,8 @@ export class ExperiencesService {
       throw new ForbiddenException('You can only update your own experiences');
     }
 
-    const { includes, excludes, images, languages, ...rest } = updateExperienceDto;
+    const { includes, excludes, images, languages, ...rest } =
+      updateExperienceDto;
     const updateData: any = { ...rest };
 
     if (includes !== undefined) {
@@ -155,9 +193,51 @@ export class ExperiencesService {
       updateData.languages = languages ? JSON.stringify(languages) : null;
     }
 
-    const updated = await this.prisma.experience.update({
-      where: { id },
-      data: updateData,
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await tx.experience.update({
+        where: { id },
+        data: updateData,
+      });
+
+      if (includes !== undefined) {
+        await tx.experienceInclude.deleteMany({ where: { experienceId: id } });
+        if (includes.length > 0) {
+          await tx.experienceInclude.createMany({
+            data: includes.map((itemText) => ({ experienceId: id, itemText })),
+          });
+        }
+      }
+
+      if (images !== undefined) {
+        await tx.experienceImage.deleteMany({ where: { experienceId: id } });
+        if (images.length > 0) {
+          await tx.experienceImage.createMany({
+            data: images.map((imageUrl, index) => ({
+              experienceId: id,
+              imageUrl,
+              displayOrder: index,
+              isCover: index === 0,
+            })),
+          });
+        }
+      }
+
+      if (languages !== undefined) {
+        await tx.experienceLanguage.deleteMany({ where: { experienceId: id } });
+        if (languages.length > 0) {
+          await tx.experienceLanguage.createMany({
+            data: languages.map((languageCode) => ({
+              experienceId: id,
+              languageCode,
+            })),
+          });
+        }
+      }
+
+      return tx.experience.findUniqueOrThrow({
+        where: { id },
+        include: this.experienceRelationsInclude(),
+      });
     });
 
     return this.formatExperience(updated);
@@ -231,7 +311,7 @@ export class ExperiencesService {
 
       const experiences = await this.prisma.experience.findMany({
         where,
-        include: {
+        include: this.experienceRelationsInclude({
           host: {
             select: {
               id: true,
@@ -252,7 +332,7 @@ export class ExperiencesService {
               },
             },
           },
-        },
+        }),
       });
 
       const result = experiences.map((e) => this.formatExperienceForPublic(e));
@@ -277,7 +357,7 @@ export class ExperiencesService {
     try {
       const experience = await this.prisma.experience.findFirst({
         where: { id, status: 'PUBLISHED' },
-        include: {
+        include: this.experienceRelationsInclude({
           host: {
             select: {
               id: true,
@@ -299,7 +379,7 @@ export class ExperiencesService {
               },
             },
           },
-        },
+        }),
       });
 
       if (!experience) {
@@ -318,8 +398,28 @@ export class ExperiencesService {
     }
   }
 
-  private safeJsonParse(value: string | null | undefined, fallback: string[] | string = '[]'): any {
-    if (value == null || value === '') return typeof fallback === 'string' ? [] : fallback;
+  private experienceRelationsInclude(extra: Record<string, unknown> = {}) {
+    return {
+      experienceIncludes: {
+        select: { itemText: true },
+      },
+      experienceLanguages: {
+        select: { languageCode: true },
+      },
+      experienceImages: {
+        select: { imageUrl: true, displayOrder: true },
+        orderBy: { displayOrder: 'asc' as const },
+      },
+      ...extra,
+    };
+  }
+
+  private safeJsonParse(
+    value: string | null | undefined,
+    fallback: string[] | string = '[]',
+  ): any {
+    if (value == null || value === '')
+      return typeof fallback === 'string' ? [] : fallback;
     try {
       return JSON.parse(value);
     } catch {
@@ -328,15 +428,37 @@ export class ExperiencesService {
   }
 
   private formatExperience(experience: any) {
-    const { includes, excludes, images, languages, pricePerParticipant, ...rest } = experience;
+    const {
+      includes,
+      excludes,
+      images,
+      languages,
+      experienceIncludes,
+      experienceImages,
+      experienceLanguages,
+      pricePerParticipant,
+      ...rest
+    } = experience;
 
     return {
       ...rest,
-      pricePerParticipant: pricePerParticipant != null ? Number(pricePerParticipant) : pricePerParticipant,
-      includes: this.safeJsonParse(includes),
+      pricePerParticipant:
+        pricePerParticipant != null
+          ? Number(pricePerParticipant)
+          : pricePerParticipant,
+      includes: Array.isArray(experienceIncludes)
+        ? experienceIncludes.map((item: any) => item.itemText)
+        : this.safeJsonParse(includes),
       excludes: this.safeJsonParse(excludes),
-      images: this.safeJsonParse(images),
-      languages: this.safeJsonParse(languages),
+      images: Array.isArray(experienceImages)
+        ? experienceImages
+            .slice()
+            .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
+            .map((item: any) => item.imageUrl)
+        : this.safeJsonParse(images),
+      languages: Array.isArray(experienceLanguages)
+        ? experienceLanguages.map((item: any) => item.languageCode)
+        : this.safeJsonParse(languages),
     };
   }
 

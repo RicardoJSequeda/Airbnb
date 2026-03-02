@@ -1,0 +1,10 @@
+{
+  "name": "worker",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "echo worker-wrapper-built",
+    "start": "node ../api-gateway/dist/worker/main.js",
+    "dev": "pnpm --filter api-gateway exec nest start --watch --entryFile worker/main"
+  }
+}

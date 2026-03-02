@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { BookingsService } from './bookings.service';
 import { BookingsController } from './bookings.controller';
-import { PrismaService } from '../common/prisma.service';
 import { StripeService } from '../payments/stripe.service';
 import { RedisService } from '../common/redis.service';
 import { SubscriptionGuard } from '../common/guards/subscription.guard';
@@ -14,12 +13,19 @@ import { CreateBookingUseCase } from './application/create-booking.usecase';
 import { CancelBookingUseCase } from './application/cancel-booking.usecase';
 import { ConfirmBookingUseCase } from './application/confirm-booking.usecase';
 import { RejectBookingUseCase } from './application/reject-booking.usecase';
+import { PrismaBookingsQueryRepository } from './infra/prisma-bookings-query.repository';
+import { GetBookingDetailsQuery } from './application/queries/get-booking-details.query';
+import { GetBookingsByGuestQuery } from './application/queries/get-bookings-by-guest.query';
+import { GetBookingsByHostQuery } from './application/queries/get-bookings-by-host.query';
+import { PrismaBookingsClient } from '../contexts/bookings/infrastructure/prisma-bookings.client';
+import { PrismaPaymentsClient } from '../contexts/payments/infrastructure/prisma-payments.client';
 
 @Module({
   imports: [ConfigModule],
   controllers: [BookingsController],
   providers: [
-    PrismaService,
+    PrismaBookingsClient,
+    PrismaPaymentsClient,
     StripeService,
     RedisService,
     {
@@ -40,10 +46,18 @@ import { RejectBookingUseCase } from './application/reject-booking.usecase';
       provide: 'IBookingsRepository',
       useExisting: PrismaBookingsRepository,
     },
+    PrismaBookingsQueryRepository,
+    {
+      provide: 'IBookingsQueryRepository',
+      useExisting: PrismaBookingsQueryRepository,
+    },
     CreateBookingUseCase,
     CancelBookingUseCase,
     ConfirmBookingUseCase,
     RejectBookingUseCase,
+    GetBookingDetailsQuery,
+    GetBookingsByGuestQuery,
+    GetBookingsByHostQuery,
     BookingsService,
     SubscriptionGuard,
   ],

@@ -28,15 +28,42 @@ export class PropertiesService {
   ) {
     const { amenities, images, ...rest } = createPropertyDto;
 
-    const property = await this.prisma.property.create({
-      data: {
-        ...rest,
-        hostId,
-        organizationId,
-        amenities: JSON.stringify(amenities ?? []),
-        images: JSON.stringify(images ?? []),
-        status: 'DRAFT',
-      },
+    const property = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.property.create({
+        data: {
+          ...rest,
+          hostId,
+          organizationId,
+          amenities: JSON.stringify(amenities ?? []),
+          images: JSON.stringify(images ?? []),
+          status: 'DRAFT',
+        },
+      });
+
+      if (amenities?.length) {
+        await tx.propertyAmenity.createMany({
+          data: amenities.map((amenityName) => ({
+            propertyId: created.id,
+            amenityName,
+          })),
+        });
+      }
+
+      if (images?.length) {
+        await tx.propertyImage.createMany({
+          data: images.map((imageUrl, index) => ({
+            propertyId: created.id,
+            imageUrl,
+            displayOrder: index,
+            isPrimary: index === 0,
+          })),
+        });
+      }
+
+      return tx.property.findUniqueOrThrow({
+        where: { id: created.id },
+        include: this.propertyRelationsInclude(),
+      });
     });
 
     return this.formatProperty(property);
@@ -73,7 +100,7 @@ export class PropertiesService {
 
     const properties = await this.prisma.property.findMany({
       where,
-      include: {
+      include: this.propertyRelationsInclude({
         host: {
           select: {
             id: true,
@@ -81,7 +108,7 @@ export class PropertiesService {
             avatar: true,
           },
         },
-      },
+      }),
     });
 
     const result = properties.map((p) => this.formatProperty(p));
@@ -105,7 +132,7 @@ export class PropertiesService {
 
     const property = await this.prisma.property.findFirst({
       where,
-      include: {
+      include: this.propertyRelationsInclude({
         host: {
           select: {
             id: true,
@@ -124,7 +151,7 @@ export class PropertiesService {
             },
           },
         },
-      },
+      }),
     });
 
     if (!property) {
@@ -151,13 +178,43 @@ export class PropertiesService {
 
     const { amenities, images, ...rest } = updatePropertyDto;
 
-    const updated = await this.prisma.property.update({
-      where: { id },
-      data: {
-        ...rest,
-        ...(amenities && { amenities: JSON.stringify(amenities) }),
-        ...(images && { images: JSON.stringify(images) }),
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await tx.property.update({
+        where: { id },
+        data: {
+          ...rest,
+          ...(amenities !== undefined && { amenities: JSON.stringify(amenities) }),
+          ...(images !== undefined && { images: JSON.stringify(images) }),
+        },
+      });
+
+      if (amenities !== undefined) {
+        await tx.propertyAmenity.deleteMany({ where: { propertyId: id } });
+        if (amenities.length > 0) {
+          await tx.propertyAmenity.createMany({
+            data: amenities.map((amenityName) => ({ propertyId: id, amenityName })),
+          });
+        }
+      }
+
+      if (images !== undefined) {
+        await tx.propertyImage.deleteMany({ where: { propertyId: id } });
+        if (images.length > 0) {
+          await tx.propertyImage.createMany({
+            data: images.map((imageUrl, index) => ({
+              propertyId: id,
+              imageUrl,
+              displayOrder: index,
+              isPrimary: index === 0,
+            })),
+          });
+        }
+      }
+
+      return tx.property.findUniqueOrThrow({
+        where: { id },
+        include: this.propertyRelationsInclude(),
+      });
     });
 
     return this.formatProperty(updated);
@@ -228,7 +285,7 @@ export class PropertiesService {
 
       const properties = await this.prisma.property.findMany({
         where,
-        include: {
+        include: this.propertyRelationsInclude({
           host: {
             select: {
               id: true,
@@ -236,7 +293,7 @@ export class PropertiesService {
               avatar: true,
             },
           },
-        },
+        }),
       });
 
       const result = properties.map((p) => this.formatPropertyForPublic(p));
@@ -265,7 +322,7 @@ export class PropertiesService {
     try {
       const property = await this.prisma.property.findFirst({
         where: { id, status: 'PUBLISHED' },
-        include: {
+        include: this.propertyRelationsInclude({
           host: {
             select: {
               id: true,
@@ -284,7 +341,7 @@ export class PropertiesService {
               },
             },
           },
-        },
+        }),
       });
 
       if (!property) {
@@ -303,14 +360,42 @@ export class PropertiesService {
     }
   }
 
+
+  private propertyRelationsInclude(extra: Record<string, unknown> = {}) {
+    return {
+      propertyAmenities: {
+        select: { amenityName: true },
+      },
+      propertyImages: {
+        select: { imageUrl: true, displayOrder: true },
+        orderBy: { displayOrder: 'asc' as const },
+      },
+      ...extra,
+    };
+  }
+
   private formatProperty(property: any) {
-    const { amenities, images, price, ...rest } = property;
+    const {
+      amenities,
+      images,
+      propertyAmenities,
+      propertyImages,
+      price,
+      ...rest
+    } = property;
 
     return {
       ...rest,
       price: price != null ? Number(price) : price,
-      amenities: this.safeJsonParse(amenities, []),
-      images: this.safeJsonParse(images, []),
+      amenities: Array.isArray(propertyAmenities)
+        ? propertyAmenities.map((item: any) => item.amenityName)
+        : this.safeJsonParse(amenities, []),
+      images: Array.isArray(propertyImages)
+        ? propertyImages
+            .slice()
+            .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
+            .map((item: any) => item.imageUrl)
+        : this.safeJsonParse(images, []),
     };
   }
 

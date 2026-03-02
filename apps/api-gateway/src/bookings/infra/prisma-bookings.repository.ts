@@ -4,7 +4,8 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma.service';
+import { Prisma } from '@prisma/client';
+import { PrismaBookingsClient } from '../../contexts/bookings/infrastructure/prisma-bookings.client';
 import type {
   IBookingsRepository,
   PropertySnapshot,
@@ -21,7 +22,7 @@ const HOLD_KEY_PREFIX = 'booking:hold:';
 @Injectable()
 export class PrismaBookingsRepository implements IBookingsRepository {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly prisma: PrismaBookingsClient,
     @Inject('IRedisPort') private readonly redisPort: IRedisPort,
   ) {}
 
@@ -112,6 +113,7 @@ export class PrismaBookingsRepository implements IBookingsRepository {
                 city: true,
                 country: true,
                 images: true,
+                hostId: true,
               },
             },
             guest: {
@@ -136,15 +138,39 @@ export class PrismaBookingsRepository implements IBookingsRepository {
           },
         });
 
+        await tx.bookingSummary.upsert({
+          where: { bookingId: b.id },
+          create: {
+            bookingId: b.id,
+            propertyId: b.propertyId,
+            guestId: b.guestId,
+            hostId: b.property.hostId,
+            organizationId: b.organizationId,
+            tenantId: 'default',
+            regionId: 'global',
+            status: b.status,
+            paymentStatus: 'PENDING',
+            totalPrice: booking.totalPrice,
+            checkIn: b.checkIn,
+            checkOut: b.checkOut,
+          },
+          update: {
+            status: b.status,
+            paymentStatus: 'PENDING',
+          },
+        });
+
         const outboxEvents = events ?? [];
         if (outboxEvents.length > 0) {
-          const anyTx = tx as any;
+          const anyTx = tx;
           if (anyTx.outboxEvent?.createMany) {
             await anyTx.outboxEvent.createMany({
               data: outboxEvents.map((e: DomainEvent) => ({
                 aggregateId: b.id,
                 type: e.type,
-                payload: e.payload,
+                version: e.version ?? 'v1',
+                correlationId: e.correlationId ?? null,
+                payload: e.payload as Prisma.InputJsonValue,
               })),
             });
           }
@@ -219,15 +245,22 @@ export class PrismaBookingsRepository implements IBookingsRepository {
         data: { status: status as any },
       });
 
+      await tx.bookingSummary.updateMany({
+        where: { bookingId: id },
+        data: { status },
+      });
+
       const outboxEvents = events ?? [];
       if (outboxEvents.length > 0) {
-        const anyTx = tx as any;
+        const anyTx = tx;
         if (anyTx.outboxEvent?.createMany) {
           await anyTx.outboxEvent.createMany({
             data: outboxEvents.map((e: DomainEvent) => ({
               aggregateId: id,
               type: e.type,
-              payload: e.payload,
+              version: e.version ?? 'v1',
+              correlationId: e.correlationId ?? null,
+              payload: e.payload as Prisma.InputJsonValue,
             })),
           });
         }
