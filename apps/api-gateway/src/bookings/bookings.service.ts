@@ -1,8 +1,3 @@
-/**
- * Adaptador HTTP para reservas.
- * Delega en use cases y repositorio; mapea errores de aplicación a excepciones NestJS.
- */
-
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -20,6 +15,9 @@ import {
   ApplicationForbiddenError,
   ApplicationBadRequestError,
 } from './application/errors';
+import { GetBookingDetailsQuery } from './application/queries/get-booking-details.query';
+import { GetBookingsByGuestQuery } from './application/queries/get-bookings-by-guest.query';
+import { GetBookingsByHostQuery } from './application/queries/get-bookings-by-host.query';
 
 @Injectable()
 export class BookingsService {
@@ -30,11 +28,19 @@ export class BookingsService {
     private readonly cancelBookingUseCase: CancelBookingUseCase,
     private readonly confirmBookingUseCase: ConfirmBookingUseCase,
     private readonly rejectBookingUseCase: RejectBookingUseCase,
+    private readonly getBookingDetailsQuery: GetBookingDetailsQuery,
+    private readonly getBookingsByGuestQuery: GetBookingsByGuestQuery,
+    private readonly getBookingsByHostQuery: GetBookingsByHostQuery,
     private readonly configService: ConfigService,
   ) {}
 
   async create(
-    createBookingDto: { propertyId: string; checkIn: string; checkOut: string; guests: number },
+    createBookingDto: {
+      propertyId: string;
+      checkIn: string;
+      checkOut: string;
+      guests: number;
+    },
     guestId: string,
     organizationId: string,
   ) {
@@ -48,7 +54,11 @@ export class BookingsService {
         organizationId,
       });
       return {
-        ...this.formatBooking(result.booking),
+        bookingId: result.booking.id,
+        status: result.booking.status,
+        totalPrice: result.booking.totalPrice,
+        checkIn: result.booking.checkIn,
+        checkOut: result.booking.checkOut,
         clientSecret: result.clientSecret,
         paymentIntentId: result.paymentIntentId,
       };
@@ -58,32 +68,25 @@ export class BookingsService {
   }
 
   async findAllByGuest(guestId: string, organizationId: string) {
-    const bookings = await this.bookingsRepository.findAllByGuest(
-      guestId,
-      organizationId,
-    );
-    return bookings.map((b) => this.formatBooking(b));
+    return this.getBookingsByGuestQuery.execute(guestId, organizationId);
   }
 
   async findAllByHost(hostId: string, organizationId?: string | null) {
-    const bookings = await this.bookingsRepository.findAllByHost(
+    return this.getBookingsByHostQuery.execute(
       hostId,
       organizationId ?? undefined,
     );
-    return bookings.map((b) => this.formatBooking(b));
   }
 
-  async findOne(id: string, userId: string, organizationId?: string | null) {
-    const booking = await this.bookingsRepository.findById(
-      id,
-      organizationId ?? undefined,
-    );
+  async findOne(id: string, userId: string, _organizationId?: string | null) {
+    const booking = await this.getBookingDetailsQuery.execute(id);
     if (!booking) throw new NotFoundException('Booking not found');
-    if (!booking.property) throw new NotFoundException('Booking not found');
-    if (booking.guestId !== userId && booking.property.hostId !== userId) {
+
+    if (booking.guestId !== userId && booking.hostId !== userId) {
       throw new ForbiddenException('You can only view your own bookings');
     }
-    return this.formatBooking(booking);
+
+    return booking;
   }
 
   async cancel(id: string, userId: string, organizationId?: string | null) {
@@ -93,7 +96,10 @@ export class BookingsService {
         userId,
         organizationId,
       });
-      return this.formatBooking(result.booking);
+      return {
+        bookingId: result.booking.id,
+        status: result.booking.status,
+      };
     } catch (err) {
       throw this.mapError(err);
     }
@@ -112,7 +118,8 @@ export class BookingsService {
         platformFeePercentage: feePercentage,
       });
       return {
-        ...this.formatBooking(result.booking),
+        bookingId: result.booking.id,
+        status: result.booking.status,
         paymentBreakdown: result.paymentBreakdown,
       };
     } catch (err) {
@@ -127,7 +134,10 @@ export class BookingsService {
         hostId,
         organizationId,
       });
-      return this.formatBooking(result.booking);
+      return {
+        bookingId: result.booking.id,
+        status: result.booking.status,
+      };
     } catch (err) {
       throw this.mapError(err);
     }
@@ -144,22 +154,5 @@ export class BookingsService {
       throw new BadRequestException(err.message);
     }
     throw err;
-  }
-
-  private formatBooking(booking: any) {
-    const { property, ...rest } = booking;
-    return {
-      ...rest,
-      totalPrice: rest.totalPrice ? Number(rest.totalPrice) : rest.totalPrice,
-      property: property
-        ? {
-            ...property,
-            images:
-              typeof property.images === 'string'
-                ? JSON.parse(property.images || '[]')
-                : property.images,
-          }
-        : undefined,
-    };
   }
 }

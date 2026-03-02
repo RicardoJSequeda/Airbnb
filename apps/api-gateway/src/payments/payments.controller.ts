@@ -20,6 +20,7 @@ import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { OrganizationGuard } from '../common/guards/organization.guard';
 import { SubscriptionGuard } from '../common/guards/subscription.guard';
 import { Public } from '../common/decorators/public.decorator';
+import { RequireIdempotency } from '../common/decorators/idempotency.decorator';
 
 @Controller('payments')
 @UseGuards(SupabaseAuthGuard, OrganizationGuard, SubscriptionGuard)
@@ -27,6 +28,7 @@ export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post('create-intent')
+  @RequireIdempotency()
   createPaymentIntent(
     @Body() createPaymentIntentDto: CreatePaymentIntentDto,
     @Request() req,
@@ -38,6 +40,7 @@ export class PaymentsController {
   }
 
   @Post('confirm')
+  @RequireIdempotency()
   confirmPayment(@Body() confirmPaymentDto: ConfirmPaymentDto, @Request() req) {
     return this.paymentsService.confirmPayment(
       confirmPaymentDto,
@@ -55,6 +58,7 @@ export class PaymentsController {
   }
 
   @Post(':id/refund')
+  @RequireIdempotency()
   refundPayment(@Param('id') id: string, @Request() req) {
     return this.paymentsService.refundPayment(
       id,
@@ -71,7 +75,9 @@ export class PaymentsController {
     @Headers('stripe-signature') signature: string,
   ) {
     if (!req.rawBody) {
-      throw new BadRequestException('Missing raw body (ensure rawBody: true in NestJS)');
+      throw new BadRequestException(
+        'Missing raw body (ensure rawBody: true in NestJS)',
+      );
     }
     if (!signature) {
       throw new BadRequestException('Missing Stripe-Signature header');

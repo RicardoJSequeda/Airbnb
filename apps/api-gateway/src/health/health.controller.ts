@@ -3,14 +3,26 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from '../common/decorators/public.decorator';
 import { HealthService } from './health.service';
 
-@Controller('health')
+@Controller()
 @SkipThrottle()
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
-  @Get()
+  @Get('health')
   @Public()
-  async check() {
-    return this.healthService.check();
+  async health() {
+    return this.healthService.health();
+  }
+
+  @Get('ready')
+  @Public()
+  async ready() {
+    return this.healthService.ready();
+  }
+
+  @Get('live')
+  @Public()
+  live() {
+    return this.healthService.live();
   }
 }
