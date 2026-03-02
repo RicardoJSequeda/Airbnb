@@ -35,6 +35,78 @@ enum SubscriptionStatus {
   @@schema("users")
 }
 
+model PropertyAmenity {
+  id          String   @id @default(uuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  amenityName String
+
+  createdAt DateTime @default(now())
+
+  @@index([propertyId])
+  @@index([amenityName])
+  @@map("property_amenities")
+  @@schema("listings")
+}
+
+model PropertyImage {
+  id           String   @id @default(uuid())
+  propertyId   String
+  property     Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  imageUrl     String
+  displayOrder Int      @default(0)
+  isPrimary    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([propertyId, displayOrder])
+  @@index([propertyId])
+  @@map("property_images")
+  @@schema("listings")
+}
+
+model ExperienceInclude {
+  id           String     @id @default(uuid())
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  itemText     String
+
+  createdAt DateTime @default(now())
+
+  @@index([experienceId])
+  @@map("experience_includes")
+  @@schema("listings")
+}
+
+model ExperienceLanguage {
+  id           String     @id @default(uuid())
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  languageCode String
+
+  createdAt DateTime @default(now())
+
+  @@index([experienceId])
+  @@map("experience_languages")
+  @@schema("listings")
+}
+
+model ExperienceImage {
+  id           String     @id @default(uuid())
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  imageUrl     String
+  displayOrder Int        @default(0)
+  isCover      Boolean    @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([experienceId, displayOrder])
+  @@index([experienceId])
+  @@map("experience_images")
+  @@schema("listings")
+}
+
 enum BookingStatus {
   PENDING
   CONFIRMED
@@ -152,6 +224,9 @@ model Property {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   amenities      String
   images         String
+
+  propertyAmenities PropertyAmenity[]
+  propertyImages    PropertyImage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -474,6 +549,10 @@ model Experience {
   meetingPoint   String? // Punto de encuentro
   languages      String? // JSON array: ["es", "en"]
   ageRestriction String? // "18+", "All ages", etc.
+
+  experienceIncludes  ExperienceInclude[]
+  experienceLanguages ExperienceLanguage[]
+  experienceImages    ExperienceImage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

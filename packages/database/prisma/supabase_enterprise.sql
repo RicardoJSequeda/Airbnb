@@ -161,8 +161,6 @@ CREATE TABLE listings.properties (
   longitude DOUBLE PRECISION NOT NULL,
   host_id UUID NOT NULL,
   organization_id UUID NOT NULL,
-  amenities TEXT NOT NULL,
-  images TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT fk_properties_host FOREIGN KEY (host_id) REFERENCES users.users(id) ON DELETE RESTRICT,
@@ -293,11 +291,7 @@ CREATE TABLE listings.experiences (
   longitude DOUBLE PRECISION NOT NULL,
   host_id UUID NOT NULL,
   organization_id UUID NOT NULL,
-  includes TEXT NOT NULL,
-  excludes TEXT,
-  images TEXT NOT NULL,
   meeting_point TEXT,
-  languages TEXT,
   age_restriction TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -563,3 +557,132 @@ CREATE INDEX idx_consumed_events_tenant_id ON platform.consumed_events (tenant_i
 CREATE INDEX idx_consumed_events_tenant_created_at_desc ON platform.consumed_events (tenant_id, processed_at DESC);
 CREATE INDEX idx_consumed_events_event_id ON platform.consumed_events (event_id);
 CREATE INDEX idx_consumed_events_topic_processed_at ON platform.consumed_events (topic, processed_at);
+
+
+CREATE TABLE listings.amenity_catalog (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  region_id VARCHAR(32) NOT NULL DEFAULT 'global',
+  code VARCHAR(80) NOT NULL,
+  display_name VARCHAR(120) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_amenity_catalog_tenant_code UNIQUE (tenant_id, code)
+);
+
+CREATE INDEX idx_amenity_catalog_tenant_id ON listings.amenity_catalog (tenant_id);
+CREATE INDEX idx_amenity_catalog_tenant_created_at_desc ON listings.amenity_catalog (tenant_id, created_at DESC);
+
+CREATE TABLE listings.experience_inclusion_catalog (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  region_id VARCHAR(32) NOT NULL DEFAULT 'global',
+  code VARCHAR(80) NOT NULL,
+  display_name VARCHAR(160) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_exp_inclusion_catalog_tenant_code UNIQUE (tenant_id, code)
+);
+
+CREATE INDEX idx_exp_inclusion_catalog_tenant_id ON listings.experience_inclusion_catalog (tenant_id);
+CREATE INDEX idx_exp_inclusion_catalog_tenant_created_at_desc ON listings.experience_inclusion_catalog (tenant_id, created_at DESC);
+
+CREATE TABLE listings.experience_exclusion_catalog (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  region_id VARCHAR(32) NOT NULL DEFAULT 'global',
+  code VARCHAR(80) NOT NULL,
+  display_name VARCHAR(160) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_exp_exclusion_catalog_tenant_code UNIQUE (tenant_id, code)
+);
+
+CREATE INDEX idx_exp_exclusion_catalog_tenant_id ON listings.experience_exclusion_catalog (tenant_id);
+CREATE INDEX idx_exp_exclusion_catalog_tenant_created_at_desc ON listings.experience_exclusion_catalog (tenant_id, created_at DESC);
+
+CREATE TABLE listings.property_amenities (
+  property_id UUID NOT NULL,
+  tenant_id UUID NOT NULL,
+  region_id VARCHAR(32) NOT NULL DEFAULT 'global',
+  amenity_name VARCHAR(120) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (property_id, amenity_name),
+  CONSTRAINT fk_property_amenities_property FOREIGN KEY (property_id) REFERENCES listings.properties(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_property_amenities_tenant_id ON listings.property_amenities (tenant_id);
+CREATE INDEX idx_property_amenities_tenant_created_at_desc ON listings.property_amenities (tenant_id, created_at DESC);
+CREATE INDEX idx_property_amenities_amenity_name ON listings.property_amenities (amenity_name);
+
+CREATE TABLE listings.property_images (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  property_id UUID NOT NULL,
+  tenant_id UUID NOT NULL,
+  region_id VARCHAR(32) NOT NULL DEFAULT 'global',
+  image_url TEXT NOT NULL,
+  display_order INT NOT NULL DEFAULT 0,
+  is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_property_images_property FOREIGN KEY (property_id) REFERENCES listings.properties(id) ON DELETE CASCADE,
+  CONSTRAINT uq_property_images_order UNIQUE (property_id, display_order)
+);
+
+CREATE INDEX idx_property_images_property_id ON listings.property_images (property_id);
+CREATE INDEX idx_property_images_tenant_id ON listings.property_images (tenant_id);
+CREATE INDEX idx_property_images_tenant_created_at_desc ON listings.property_images (tenant_id, created_at DESC);
+CREATE UNIQUE INDEX uq_property_images_primary_partial ON listings.property_images (property_id) WHERE is_primary = TRUE;
+
+CREATE TABLE listings.experience_inclusions (
+  experience_id UUID NOT NULL,
+  tenant_id UUID NOT NULL,
+  region_id VARCHAR(32) NOT NULL DEFAULT 'global',
+  item VARCHAR(160) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (experience_id, item),
+  CONSTRAINT fk_experience_inclusions_experience FOREIGN KEY (experience_id) REFERENCES listings.experiences(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_experience_inclusions_tenant_id ON listings.experience_inclusions (tenant_id);
+CREATE INDEX idx_experience_inclusions_tenant_created_at_desc ON listings.experience_inclusions (tenant_id, created_at DESC);
+
+CREATE TABLE listings.experience_exclusions (
+  experience_id UUID NOT NULL,
+  tenant_id UUID NOT NULL,
+  region_id VARCHAR(32) NOT NULL DEFAULT 'global',
+  item VARCHAR(160) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (experience_id, item),
+  CONSTRAINT fk_experience_exclusions_experience FOREIGN KEY (experience_id) REFERENCES listings.experiences(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_experience_exclusions_tenant_id ON listings.experience_exclusions (tenant_id);
+CREATE INDEX idx_experience_exclusions_tenant_created_at_desc ON listings.experience_exclusions (tenant_id, created_at DESC);
+
+CREATE TABLE listings.experience_languages (
+  experience_id UUID NOT NULL,
+  tenant_id UUID NOT NULL,
+  region_id VARCHAR(32) NOT NULL DEFAULT 'global',
+  language_code VARCHAR(10) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (experience_id, language_code),
+  CONSTRAINT fk_experience_languages_experience FOREIGN KEY (experience_id) REFERENCES listings.experiences(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_experience_languages_tenant_id ON listings.experience_languages (tenant_id);
+CREATE INDEX idx_experience_languages_tenant_created_at_desc ON listings.experience_languages (tenant_id, created_at DESC);
+
+CREATE TABLE listings.experience_images (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  experience_id UUID NOT NULL,
+  tenant_id UUID NOT NULL,
+  region_id VARCHAR(32) NOT NULL DEFAULT 'global',
+  image_url TEXT NOT NULL,
+  display_order INT NOT NULL DEFAULT 0,
+  is_cover BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_experience_images_experience FOREIGN KEY (experience_id) REFERENCES listings.experiences(id) ON DELETE CASCADE,
+  CONSTRAINT uq_experience_images_order UNIQUE (experience_id, display_order)
+);
+
+CREATE INDEX idx_experience_images_experience_id ON listings.experience_images (experience_id);
+CREATE INDEX idx_experience_images_tenant_id ON listings.experience_images (tenant_id);
+CREATE INDEX idx_experience_images_tenant_created_at_desc ON listings.experience_images (tenant_id, created_at DESC);
+CREATE UNIQUE INDEX uq_experience_images_cover_partial ON listings.experience_images (experience_id) WHERE is_cover = TRUE;
