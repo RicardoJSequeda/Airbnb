@@ -157,19 +157,31 @@ const experienceUI: SearchUIStrategy = {
 
 const servicesUI: SearchUIStrategy = {
   components: {
-    showDates: false,
-    showGuests: false,
-    dateMode: null,
+    showDates: true,
+    showGuests: true,
+    dateMode: 'single',
     guestsMode: null,
-    locationPlaceholder: '¿Qué servicio buscas?',
-    datesSectionLabel: 'Cuándo',
-    guestsSectionLabel: 'Quién',
+    // Texto específico para servicios; la lógica de fechas es como experiencias
+    locationPlaceholder: '¿Dónde necesitas el servicio?',
+    datesSectionLabel: 'Fechas',
+    guestsSectionLabel: 'Tipo de servicio',
+    dateAndTime: createExperienceDateAndTimeConfig(),
   },
-  getDatesLabel() {
-    return ''
+  getDatesLabel(state) {
+    if (state.variant !== 'services') return 'Agrega fechas'
+    const ed = state.experienceDate
+    if (!ed) return 'Agrega fechas'
+    if (ed.type === 'today') return 'Hoy'
+    if (ed.type === 'tomorrow') return 'Mañana'
+    if (ed.type === 'weekend') return 'Este fin de semana'
+    return ed.date?.toLocaleDateString('es-ES') ?? 'Agrega fechas'
   },
-  getGuestsLabel() {
-    return ''
+  getGuestsLabel(state) {
+    if (state.variant !== 'services') return 'Agregar servicio'
+    if (!state.serviceType) return 'Agregar servicio'
+    // El nombre legible del tipo de servicio se resuelve en la UI de chips;
+    // aquí solo mostramos el id como respaldo en caso de que no haya mapping.
+    return state.serviceType
   },
   getEmptyGuestsSection(): ParticipantsValue {
     return { adults: 0, children: 0, babies: 0 }
@@ -180,14 +192,14 @@ const servicesUI: SearchUIStrategy = {
   getDateRange() {
     return undefined
   },
-  getExperienceDate() {
-    return undefined
+  getExperienceDate(s) {
+    return s.variant === 'services' ? s.experienceDate ?? null : undefined
   },
   getGuests() {
     return undefined
   },
-  getParticipants() {
-    return undefined
+  getParticipants(s) {
+    return s.variant === 'services' ? s.participants : undefined
   },
 }
 

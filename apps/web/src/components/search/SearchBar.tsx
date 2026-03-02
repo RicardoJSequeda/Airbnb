@@ -4,7 +4,7 @@
  * SearchBar: 100% agnóstico. Estado en strategy + reducer; cero conocimiento de dominio.
  */
 
-import { useReducer, useEffect, useMemo, Fragment } from 'react'
+import { useReducer, useEffect, useMemo, Fragment, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { Search, X } from 'lucide-react'
@@ -23,11 +23,14 @@ import type {
   SearchAction,
   GuestsValue,
   ParticipantsValue,
+  SearchFormState,
 } from '@/config/search'
 import { useSearchSuggestions } from './useSearchSuggestions'
 import { LocationInput } from './LocationInput'
 import { DateInput } from './DateInput'
 import { GuestsInput } from './GuestsInput'
+import { ServiceTypeInput } from './ServiceTypeInput'
+import { serviceCategories } from '@/components/services/data'
 
 const capsuleSpring = { type: 'spring' as const, stiffness: 520, damping: 38, mass: 0.7 }
 const panelLayoutSpring = { type: 'spring' as const, stiffness: 350, damping: 32 }
@@ -55,6 +58,10 @@ function stepToSection(step: 'idle' | 'location' | 'dates' | 'guests'): ActiveSe
   return step
 }
 
+function getServiceTypeFromForm(form: SearchFormState): string | null {
+  return form.variant === 'services' ? form.serviceType ?? null : null
+}
+
 interface SearchBarProps {
   variant: SearchVariant
   initialSection?: ActiveSection
@@ -65,7 +72,8 @@ export function SearchBar({ variant, initialSection = null, onClose }: SearchBar
   const router = useRouter()
   const strategy = searchStrategies[variant]
   const comp = strategy.components
-  const { suggestions, loading } = useSearchSuggestions(strategy)
+  const [locationQuery, setLocationQuery] = useState('')
+  const { suggestions, loading } = useSearchSuggestions(strategy, locationQuery)
 
   const reducer = useMemo(() => createSearchReducer(strategy), [strategy])
   const [state, dispatch] = useReducer(
@@ -143,6 +151,8 @@ export function SearchBar({ variant, initialSection = null, onClose }: SearchBar
         value: { id: d.id, name: d.name, city: d.city, region: d.region },
       },
     })
+    // Al seleccionar un destino limpiamos la query para volver al estado base de sugerencias
+    setLocationQuery('')
     const neighborhoods = NEIGHBORHOODS_BY_CITY[d.city]
     locationsApi
       .getPlacesByCity(citySlug(d.city))
@@ -231,6 +241,7 @@ export function SearchBar({ variant, initialSection = null, onClose }: SearchBar
   }
 
   const destination = strategy.getDestination(state.form)
+  const selectedServiceType = getServiceTypeFromForm(state.form)
 
   const sections: { id: ActiveSection; label: string; sublabel: React.ReactNode }[] = [
     {
@@ -267,13 +278,39 @@ export function SearchBar({ variant, initialSection = null, onClose }: SearchBar
     sections.push({ id: 'dates', label: comp.datesSectionLabel, sublabel: datesLabel })
   }
   if (comp.showGuests) {
+    const serviceTypeSublabel =
+      variant === 'services' && selectedServiceType ? (
+        <>
+          <span>
+            {serviceCategories.find((c) => c.id === selectedServiceType)?.name ?? selectedServiceType}
+          </span>
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation()
+              dispatch({ type: 'FORM_UPDATE', update: { field: 'serviceType', value: null } })
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                dispatch({ type: 'FORM_UPDATE', update: { field: 'serviceType', value: null } })
+              }
+            }}
+            className="p-0.5 hover:bg-gray-200 rounded-full cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </span>
+        </>
+      ) : null
+
     sections.push({
       id: 'guests',
       label: comp.guestsSectionLabel,
       sublabel: (
         <>
-          {guestsLabel}
-          {guestsCount > 0 && (
+          {variant === 'services' ? (serviceTypeSublabel ?? guestsLabel) : guestsLabel}
+          {variant !== 'services' && guestsCount > 0 && (
             <span
               role="button"
               tabIndex={0}
@@ -300,7 +337,13 @@ export function SearchBar({ variant, initialSection = null, onClose }: SearchBar
   const panelJustify =
     activeSection === 'destination' ? 'flex-start' : activeSection === 'dates' ? 'center' : 'flex-end'
   const panelWidth =
-    activeSection === 'destination' ? 425 : activeSection === 'dates' ? 'min(90vw, 850px)' : 400
+    activeSection === 'destination'
+      ? 425
+      : activeSection === 'dates'
+        ? 'min(90vw, 850px)'
+        : activeSection === 'guests' && variant === 'services'
+          ? 'min(90vw, 520px)'
+          : 400
 
   const mobileSectionTitle =
     activeSection === 'destination'
@@ -386,6 +429,8 @@ export function SearchBar({ variant, initialSection = null, onClose }: SearchBar
                     <LocationInput
                       placeholder={comp.locationPlaceholder}
                       value={destination ?? null}
+                      query={locationQuery}
+                      onQueryChange={setLocationQuery}
                       onSelect={handleDestinationSelect}
                       onNearby={handleNearby}
                       onNeighborhoodSelect={handleNeighborhoodSelect}
@@ -418,19 +463,34 @@ export function SearchBar({ variant, initialSection = null, onClose }: SearchBar
                   />
                 )}
                 {activeSection === 'guests' && comp.showGuests && (
-                  <GuestsInput
-                    key="guests"
-                    guestsMode={comp.guestsMode!}
-                    guests={strategy.getGuests(state.form)}
-                    participants={strategy.getParticipants(state.form)}
-                    onGuestsChange={(g) =>
-                      dispatch({ type: 'FORM_UPDATE', update: { field: 'guests', value: g } })
-                    }
-                    onParticipantsChange={(p) =>
-                      dispatch({ type: 'FORM_UPDATE', update: { field: 'participants', value: p } })
-                    }
-                    onClose={closePanel}
-                  />
+                  variant === 'services' ? (
+                    <ServiceTypeInput
+                      value={selectedServiceType}
+                      onChange={(next) =>
+                        dispatch({
+                          type: 'FORM_UPDATE',
+                          update: { field: 'serviceType', value: next },
+                        })
+                      }
+                    />
+                  ) : (
+                    <GuestsInput
+                      key="guests"
+                      guestsMode={comp.guestsMode!}
+                      guests={strategy.getGuests(state.form)}
+                      participants={strategy.getParticipants(state.form)}
+                      onGuestsChange={(g) =>
+                        dispatch({ type: 'FORM_UPDATE', update: { field: 'guests', value: g } })
+                      }
+                      onParticipantsChange={(p) =>
+                        dispatch({
+                          type: 'FORM_UPDATE',
+                          update: { field: 'participants', value: p },
+                        })
+                      }
+                      onClose={closePanel}
+                    />
+                  )
                 )}
               </AnimatePresence>
             </motion.div>
@@ -462,6 +522,8 @@ export function SearchBar({ variant, initialSection = null, onClose }: SearchBar
                   <LocationInput
                     placeholder={comp.locationPlaceholder}
                     value={destination ?? null}
+                    query={locationQuery}
+                    onQueryChange={setLocationQuery}
                     onSelect={handleDestinationSelect}
                     onNearby={handleNearby}
                     onNeighborhoodSelect={handleNeighborhoodSelect}
@@ -492,18 +554,33 @@ export function SearchBar({ variant, initialSection = null, onClose }: SearchBar
                   />
                 )}
                 {activeSection === 'guests' && comp.showGuests && (
-                  <GuestsInput
-                    guestsMode={comp.guestsMode!}
-                    guests={strategy.getGuests(state.form)}
-                    participants={strategy.getParticipants(state.form)}
-                    onGuestsChange={(g) =>
-                      dispatch({ type: 'FORM_UPDATE', update: { field: 'guests', value: g } })
-                    }
-                    onParticipantsChange={(p) =>
-                      dispatch({ type: 'FORM_UPDATE', update: { field: 'participants', value: p } })
-                    }
-                    onClose={closePanel}
-                  />
+                  variant === 'services' ? (
+                    <ServiceTypeInput
+                      value={selectedServiceType}
+                      onChange={(next) =>
+                        dispatch({
+                          type: 'FORM_UPDATE',
+                          update: { field: 'serviceType', value: next },
+                        })
+                      }
+                    />
+                  ) : (
+                    <GuestsInput
+                      guestsMode={comp.guestsMode!}
+                      guests={strategy.getGuests(state.form)}
+                      participants={strategy.getParticipants(state.form)}
+                      onGuestsChange={(g) =>
+                        dispatch({ type: 'FORM_UPDATE', update: { field: 'guests', value: g } })
+                      }
+                      onParticipantsChange={(p) =>
+                        dispatch({
+                          type: 'FORM_UPDATE',
+                          update: { field: 'participants', value: p },
+                        })
+                      }
+                      onClose={closePanel}
+                    />
+                  )
                 )}
               </div>
               <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t">

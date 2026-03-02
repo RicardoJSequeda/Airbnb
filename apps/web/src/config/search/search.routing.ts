@@ -57,7 +57,19 @@ function servicesParams(state: ServicesState): URLSearchParams {
   const params = new URLSearchParams()
   const dest = state.destination
   if (dest?.city) params.set('city', dest.city)
-  if (dest?.region) params.set('region', dest.region)
+
+  // Servicios usa el mismo set de filtros que Experiencias (fechas + participantes)
+  const ed = state.experienceDate
+  if (ed?.type) params.set('dateType', ed.type)
+  if (ed?.date) params.set('date', ed.date.toISOString().slice(0, 10))
+  if (ed?.time) params.set('time', ed.time ?? '')
+
+  const p = state.participants
+  if (p.adults) params.set('adults', String(p.adults))
+  if (p.children) params.set('children', String(p.children))
+  if (p.babies) params.set('babies', String(p.babies))
+
+   if (state.serviceType) params.set('serviceType', state.serviceType)
   return params
 }
 
@@ -86,7 +98,7 @@ export const searchRoutingStrategies: Record<SearchVariant, SearchRoutingStrateg
       return servicesParams(state)
     },
     buildSearchUrl(state) {
-      return `/services/search?${this.buildSearchParams(state).toString()}`
+      return `/services?${this.buildSearchParams(state).toString()}`
     },
   },
 }

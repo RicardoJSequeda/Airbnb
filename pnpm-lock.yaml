@@ -343,6 +343,8 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  apps/worker: {}
+
   packages/database:
     dependencies:
       '@prisma/client':

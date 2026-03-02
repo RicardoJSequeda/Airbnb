@@ -19,6 +19,7 @@ import { GetBookingsByGuestQuery } from './application/queries/get-bookings-by-g
 import { GetBookingsByHostQuery } from './application/queries/get-bookings-by-host.query';
 import { PrismaBookingsClient } from '../contexts/bookings/infrastructure/prisma-bookings.client';
 import { PrismaPaymentsClient } from '../contexts/payments/infrastructure/prisma-payments.client';
+import { PrismaService } from '../common/prisma.service';
 
 @Module({
   imports: [ConfigModule],
@@ -59,6 +60,7 @@ import { PrismaPaymentsClient } from '../contexts/payments/infrastructure/prisma
     GetBookingsByGuestQuery,
     GetBookingsByHostQuery,
     BookingsService,
+    PrismaService,
     SubscriptionGuard,
   ],
 })

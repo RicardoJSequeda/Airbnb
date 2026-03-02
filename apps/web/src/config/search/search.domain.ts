@@ -58,10 +58,18 @@ function experienceUpdate(
 }
 
 function servicesUpdate(state: ServicesState, update: SearchStateUpdate): ServicesState {
-  if (update.field === 'destination') {
-    return { ...state, destination: update.value }
+  switch (update.field) {
+    case 'destination':
+      return { ...state, destination: update.value }
+    case 'experienceDate':
+      return { ...state, experienceDate: update.value }
+    case 'participants':
+      return { ...state, participants: update.value }
+    case 'serviceType':
+      return { ...state, serviceType: update.value }
+    default:
+      return state
   }
-  return state
 }
 
 const accommodationDomain: SearchDomainStrategy = {
@@ -100,7 +108,13 @@ const experienceDomain: SearchDomainStrategy = {
 
 const servicesDomain: SearchDomainStrategy = {
   createInitialState(): ServicesState {
-    return { variant: 'services', destination: null }
+    return {
+      variant: 'services',
+      destination: null,
+      experienceDate: null,
+      participants: { adults: 0, children: 0, babies: 0 },
+      serviceType: null,
+    }
   },
   updateState(state, update) {
     if (state.variant !== 'services') return state

@@ -25,7 +25,7 @@ function validateExperience(state: ExperienceState): ValidationResult {
 function validateServices(state: ServicesState): ValidationResult {
   const errors: Record<string, string> = {}
   if (!state.destination?.city) {
-    errors.destination = 'Indica qué servicio buscas'
+    errors.destination = 'Elige una ciudad o interés'
   }
   return { valid: Object.keys(errors).length === 0, errors: Object.keys(errors).length ? errors : undefined }
 }

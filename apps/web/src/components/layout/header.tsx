@@ -142,15 +142,21 @@ const Header = () => {
                                 className="flex items-center justify-center bg-white border border-gray-300 rounded-full hover:shadow-lg transition-all duration-200 w-full h-full text-left"
                             >
                                 <span className="flex-1 px-4 py-2.5 text-sm text-gray-500 truncate">
-                                    {detectSearchSection(pathname ?? '') === 'experiences' ? 'Dónde' : 'En cualquier lugar del mundo'}
+                                    {detectSearchSection(pathname ?? '') === 'experiences' || detectSearchSection(pathname ?? '') === 'services'
+                                        ? 'Dónde'
+                                        : 'En cualquier lugar del mundo'}
                                 </span>
                                 <div className="h-5 w-px bg-gray-300" />
                                 <span className="flex-1 px-3 py-2.5 text-sm text-gray-500 truncate">
-                                    {detectSearchSection(pathname ?? '') === 'experiences' ? 'Fechas' : 'Cualquier semana'}
+                                    {detectSearchSection(pathname ?? '') === 'experiences' || detectSearchSection(pathname ?? '') === 'services'
+                                        ? 'Fechas'
+                                        : 'Cualquier semana'}
                                 </span>
                                 <div className="h-5 w-px bg-gray-300" />
                                 <span className="flex-1 px-3 py-2.5 text-sm text-gray-500 truncate">
-                                    {detectSearchSection(pathname ?? '') === 'experiences' ? '¿Cuántos?' : '¿Cuántos?'}
+                                    {detectSearchSection(pathname ?? '') === 'experiences' || detectSearchSection(pathname ?? '') === 'services'
+                                        ? '¿Cuántos?'
+                                        : '¿Cuántos?'}
                                 </span>
                                 <div className="bg-primary text-white p-2 rounded-full mr-1 flex-shrink-0">
                                     <Search className="w-4 h-4" />

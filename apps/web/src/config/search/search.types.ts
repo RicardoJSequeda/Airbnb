@@ -52,6 +52,9 @@ export interface ExperienceState {
 export interface ServicesState {
   variant: 'services'
   destination: Destination | null
+  experienceDate: ExperienceDateValue | null
+  participants: ParticipantsValue
+  serviceType: string | null
 }
 
 export type SearchFormState = AccommodationState | ExperienceState | ServicesState
@@ -104,6 +107,7 @@ export type SearchStateUpdate =
   | { field: 'experienceDate'; value: ExperienceDateValue | null }
   | { field: 'guests'; value: GuestsValue }
   | { field: 'participants'; value: ParticipantsValue }
+  | { field: 'serviceType'; value: string | null }
 
 /** Paso actual del flujo UI (máquina de estados) */
 export type SearchUIStep = 'idle' | 'location' | 'dates' | 'guests'

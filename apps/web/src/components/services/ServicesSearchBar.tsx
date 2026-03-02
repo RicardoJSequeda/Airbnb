@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 const fields = [
   { label: 'Dónde', value: 'En cualquier lugar del mundo' },
@@ -7,6 +8,18 @@ const fields = [
 ]
 
 export default function ServicesSearchBar() {
+  const router = useRouter()
+
+  const handleSearchClick = () => {
+    // Reutilizamos la misma página de búsqueda de experiencias
+    // pasando filtros básicos para Bogotá (puedes ajustar esto luego).
+    const params = new URLSearchParams({
+      city: 'Bogotá',
+      dateType: 'any',
+    })
+    router.push(`/experiences/search?${params.toString()}`)
+  }
+
   return (
     <div className="mx-auto mt-6 w-full max-w-5xl rounded-full border border-[#DDDDDD] bg-white p-2 shadow-sm">
       <div className="flex items-center">
@@ -27,6 +40,7 @@ export default function ServicesSearchBar() {
 
         <button
           type="button"
+          onClick={handleSearchClick}
           className="ml-2 inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white transition hover:brightness-95"
           aria-label="Buscar servicios"
         >

@@ -18,6 +18,8 @@ export interface LocationInputValue {
 interface LocationInputProps {
   placeholder: string
   value: LocationInputValue | null
+  query: string
+  onQueryChange: (value: string) => void
   onSelect: (suggestion: LocationSuggestion) => void
   onNearby: () => void
   onNeighborhoodSelect: (name: string) => void
@@ -32,6 +34,8 @@ interface LocationInputProps {
 export function LocationInput({
   placeholder,
   value,
+  query,
+  onQueryChange,
   onSelect,
   onNearby,
   onNeighborhoodSelect,
@@ -44,7 +48,17 @@ export function LocationInput({
 }: LocationInputProps) {
   return (
     <div className="p-4 overflow-y-auto max-h-[480px]">
-      <h3 className="text-xs font-semibold text-secondary mb-3">Destinos sugeridos</h3>
+      <div className="mb-3 flex items-center gap-2">
+        <input
+          type="text"
+          className="w-full rounded-full border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-secondary focus:border-secondary"
+          placeholder={placeholder}
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+        />
+      </div>
+
+      <h3 className="text-xs font-semibold text-secondary mb-2">Destinos sugeridos</h3>
       <button
         type="button"
         className="flex items-center gap-4 w-full px-4 py-3 hover:bg-gray-100 rounded-xl text-left transition-colors"

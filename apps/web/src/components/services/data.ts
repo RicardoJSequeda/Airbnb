@@ -1,13 +1,78 @@
 import type { ServiceCategory, ServiceSectionData } from './types'
 
+// Categorías visibles en la página de Servicios.
+// Texto de disponibilidad unificado: "Servicios disponibles".
 export const serviceCategories: ServiceCategory[] = [
-  { id: 'fotografia', name: 'Fotografía', availability: '1 disponible', imageUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80' },
-  { id: 'chefs', name: 'Chefs', availability: '1 disponible', imageUrl: 'https://images.unsplash.com/photo-1556911220-bda9f7f7597e?auto=format&fit=crop&w=600&q=80' },
-  { id: 'masaje', name: 'Masaje', availability: 'Próximamente', imageUrl: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=600&q=80' },
-  { id: 'comidas', name: 'Comidas preparadas', availability: 'Próximamente', imageUrl: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80' },
-  { id: 'entrenamiento', name: 'Entrenamiento', availability: 'Próximamente', imageUrl: 'https://images.unsplash.com/photo-1517963879433-6ad2b056d712?auto=format&fit=crop&w=600&q=80' },
-  { id: 'maquillaje', name: 'Maquillaje', availability: 'Próximamente', imageUrl: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=600&q=80' },
-  { id: 'cabello', name: 'Cabello', availability: 'Próximamente', imageUrl: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=600&q=80' },
+  {
+    id: 'fotografia',
+    name: 'Fotografía',
+    availability: 'Servicios disponibles',
+    imageUrl:
+      'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    id: 'chefs',
+    name: 'Chefs',
+    availability: 'Servicios disponibles',
+    imageUrl:
+      'https://images.unsplash.com/photo-1556911220-bda9f7f7597e?auto=format&fit=crop&w=600&q=600&q=80',
+  },
+  {
+    id: 'masaje',
+    name: 'Masaje',
+    availability: 'Servicios disponibles',
+    imageUrl:
+      'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    id: 'comidas',
+    name: 'Comidas preparadas',
+    availability: 'Servicios disponibles',
+    imageUrl:
+      'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    id: 'entrenamiento',
+    name: 'Entrenamiento',
+    availability: 'Servicios disponibles',
+    imageUrl:
+      'https://images.unsplash.com/photo-1517963879433-6ad2b056d712?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    id: 'maquillaje',
+    name: 'Maquillaje',
+    availability: 'Servicios disponibles',
+    imageUrl:
+      'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    id: 'cabello',
+    name: 'Cabello',
+    availability: 'Servicios disponibles',
+    imageUrl:
+      'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    id: 'spa',
+    name: 'Tratamientos de spa',
+    availability: 'Servicios disponibles',
+    imageUrl:
+      'https://images.unsplash.com/photo-1552693673-1bf958298935?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    id: 'catering',
+    name: 'Catering',
+    availability: 'Servicios disponibles',
+    imageUrl:
+      'https://images.unsplash.com/photo-1525755662778-989d0524087e?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    id: 'unas',
+    name: 'Uñas',
+    availability: 'Servicios disponibles',
+    imageUrl:
+      'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=600&q=80',
+  },
 ]
 
 export const servicesSections: ServiceSectionData[] = [

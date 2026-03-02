@@ -15,7 +15,22 @@ function toSuggestion(d: { name: string; city: string; region: string; descripti
 
 const fallback = SUGGESTED_DESTINATIONS.map(toSuggestion)
 
-/** Por ahora destinos; luego puede ser /api/search/services/suggestions. */
-export async function fetchServiceSuggestions(_query?: string): Promise<LocationSuggestion[]> {
+/** Destinos para servicios: soporta búsqueda por texto y fallback a sugerencias. */
+export async function fetchServiceSuggestions(query?: string): Promise<LocationSuggestion[]> {
+  // Si el usuario escribe al menos 2 caracteres, buscamos ciudades/lugares concretos
+  if (query && query.trim().length >= 2) {
+    const cities = await locationsApi.searchCities(query, 10)
+    return cities.map((c) => ({
+      id: c.id,
+      name: c.name,
+      city: c.city,
+      region: c.region,
+      description: null,
+      latitude: null,
+      longitude: null,
+    }))
+  }
+
+  // Si no hay query, devolvemos sugerencias destacadas (por popularidad/orden)
   return locationsApi.getSuggestions({ sortBy: 'displayOrder' }).catch(() => fallback)
 }
