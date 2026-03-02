@@ -20,7 +20,9 @@ interface RequestWithHeaders {
   route?: { path?: string };
   path?: string;
   body?: unknown;
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
   user?: { userId?: string };
+ main
   headers?: Record<string, string | string[] | undefined>;
 }
 
@@ -57,11 +59,13 @@ export class IdempotencyInterceptor implements NestInterceptor {
       );
     }
 
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
     const actorId = request.user?.userId ?? 'anonymous';
     const tenantId =
       (request.headers?.['x-tenant-id'] as string | undefined) ?? 'default';
     const regionId =
       (request.headers?.['x-region-id'] as string | undefined) ?? 'global';
+ main
     const ttlSeconds =
       this.reflector.getAllAndOverride<number>(IDEMPOTENCY_TTL_SECONDS_KEY, [
         context.getHandler(),
@@ -69,20 +73,26 @@ export class IdempotencyInterceptor implements NestInterceptor {
       ]) ?? 3600;
 
     const path = request.route?.path ?? request.path ?? 'unknown-path';
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
     const operation = `${request.method.toUpperCase()}:${path}`;
+ main
     const payloadHash = this.idempotency.hashPayload(request.body);
 
     return from(
       this.idempotency.reserve({
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
         actorId,
         operation,
+ main
         method: request.method,
         path,
         key,
         payloadHash,
         ttlSeconds,
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
         tenantId,
         regionId,
+ main
       }),
     ).pipe(
       mergeMap((result) => {
@@ -105,7 +115,9 @@ export class IdempotencyInterceptor implements NestInterceptor {
         return next.handle().pipe(
           tap((body) => {
             void this.idempotency.saveResponse({
+ codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
               actorId,
+ main
               method: request.method,
               path,
               key,
