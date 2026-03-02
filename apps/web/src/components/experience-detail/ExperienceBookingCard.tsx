@@ -8,6 +8,8 @@ export interface ExperienceSlot {
   dateLabel: string
   timeRange: string
   spotsLeft: number
+  /** Fecha en formato YYYY-MM-DD para filtrar en el modal por día seleccionado */
+  date?: string
 }
 
 interface ExperienceBookingCardProps {

@@ -12,3 +12,7 @@ export { default as ExperienceBookingCard, type ExperienceSlot } from './Experie
 export { default as ExperienceSlotCard } from './ExperienceSlotCard'
 export { default as SelectTimeModal } from './SelectTimeModal'
 export { default as ImageCarouselModal } from './ImageCarouselModal'
+export { default as ExperienceStickySummary } from './ExperienceStickySummary'
+export { default as ExperienceCancellationPolicy } from './ExperienceCancellationPolicy'
+export { default as ExperienceQualityVerified } from './ExperienceQualityVerified'
+export { default as ExperienceReportListing } from './ExperienceReportListing'

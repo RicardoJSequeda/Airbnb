@@ -6,16 +6,16 @@ import Link from 'next/link'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import {
-  ExperienceGallery,
-  ExperienceHero,
-  ExperienceDescription,
   ExperienceHostCard,
   ExperienceWhatYouWillDo,
   ExperienceReviewsSection,
   ExperienceWhereWeMeet,
   ExperienceHostAboutSection,
   ExperienceLocation,
-  ExperienceBookingCard,
+  ExperienceStickySummary,
+  ExperienceCancellationPolicy,
+  ExperienceQualityVerified,
+  ExperienceReportListing,
   SelectTimeModal,
   type ExperienceStep,
   type ExperienceSlot,
@@ -47,6 +47,7 @@ function buildMockSlots(durationMinutes: number, count: number): ExperienceSlot[
         dateLabel,
         timeRange,
         spotsLeft: Math.floor(Math.random() * 5) + 6,
+        date: format(d, 'yyyy-MM-dd'),
       })
     }
   }
@@ -134,17 +135,55 @@ export default function ExperienceDetailPage() {
     <main className="min-h-screen bg-white">
       <Header />
 
-      {/* Sin overflow en este contenedor: overflow-x-hidden rompe position:sticky de la tarjeta */}
+      {/* Sin overflow aquí: overflow-x-hidden rompe position:sticky. La columna derecha tiene min-height + padding-bottom para que al llegar al final del contenido la izquierda no se "levante". */}
       <div className="max-w-[1120px] mx-auto px-6 md:px-10 lg:px-12 pt-[7.5rem] pb-24 scroll-smooth">
-        {/* Grid: items-start para que la columna derecha no se estire; la tarjeta baja con el scroll y se engancha en top-28 */}
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,63%)_minmax(0,37%)] gap-12 items-start">
-          
-          {/* COLUMNA IZQUIERDA: parte principal. overflow-x-hidden aquí no afecta al sticky de la columna derecha. */}
-          <div className="min-w-0 space-y-12 overflow-x-hidden">
-            <ExperienceGallery images={images} title={experience.title} />
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,42%)_minmax(0,58%)] gap-12 items-start">
+          {/* COLUMNA IZQUIERDA (STICKY): se mantiene fija mientras la derecha hace scroll; el padding-bottom de la derecha evita que se suelte al final */}
+          <aside className="min-w-0 lg:sticky lg:top-28 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-hidden">
+            <ExperienceStickySummary
+              experienceId={experience.id}
+              title={experience.title}
+              imageUrl={images[0]}
+              hostName={experience.host?.name}
+              hostAvatar={experience.host?.avatar ?? null}
+              hostOccupation={experience.hostOccupation ?? null}
+              city={experience.city}
+              category={experience.category}
+              meetingPoint={experience.meetingPoint ?? experience.address ?? null}
+              averageRating={rating}
+              totalReviews={totalReviews}
+              isFavorite={isFavorite}
+              onFavoriteToggle={() => setIsFavorite((v) => !v)}
+              pricePerParticipant={experience.pricePerParticipant}
+              currency={experience.currency}
+              originalPrice={originalPrice}
+              slots={slots}
+              onShowDates={() => setSelectTimeModalOpen(true)}
+            />
+          </aside>
+
+          {/* COLUMNA DERECHA: min-height + espaciador final para que la fila del grid sea más alta que el contenido y la sticky izquierda no se alce al llegar al final */}
+          <div className="min-w-0 space-y-12 pb-8 min-h-[calc(100vh-8rem)]">
+            <div className="space-y-4">
+              {experience.host && (
+                <ExperienceHostCard
+                  hostId={experience.host.id}
+                  hostName={experience.host.name}
+                  hostAvatar={experience.host.avatar}
+                  hostOccupation={experience.hostOccupation}
+                />
+              )}
+              <ExperienceLocation
+                title={experience.title}
+                address={experience.address || experience.meetingPoint || ''}
+                city={experience.city}
+                latitude={experience.latitude}
+                longitude={experience.longitude}
+              />
+            </div>
 
             <ExperienceWhatYouWillDo steps={steps} fallbackImage={firstImage} />
-            
+
             <ExperienceReviewsSection
               averageRating={rating}
               totalReviews={totalReviews}
@@ -170,59 +209,15 @@ export default function ExperienceDetailPage() {
                 registrationNumber={experience.hostRegistrationNumber}
               />
             )}
-          </div>
 
-          {/* COLUMNA DERECHA: dos bloques hermanos, sin centrado (patrón Airbnb). gap-6 para que el sticky se enganche antes. */}
-          <div className="min-w-0 flex flex-col gap-6">
-            {/* Bloque superior: Hero + anfitrión + ubicación. Se desplaza hacia arriba y desaparece al hacer scroll. */}
-            <div className="space-y-6 w-full">
-              <ExperienceHero
-                title={experience.title}
-                description={experience.description}
-                registrationNumber={experience.hostRegistrationNumber}
-                averageRating={rating}
-                totalReviews={totalReviews}
-                reviews={reviews}
-                category={experience.category}
-                city={experience.city}
-                experienceId={experience.id}
-                imageUrl={images[0]}
-                isFavorite={isFavorite}
-                onFavoriteToggle={() => setIsFavorite((v) => !v)}
-                languages={experience.languages}
-              />
+            <ExperienceCancellationPolicy />
 
-              {/* Información del Anfitrión y Localización */}
-              <div className="space-y-4 pt-4 border-t border-neutral-100 w-full">
-                {experience.host && (
-                  <ExperienceHostCard
-                    hostId={experience.host.id}
-                    hostName={experience.host.name}
-                    hostAvatar={experience.host.avatar}
-                    hostOccupation={experience.hostOccupation}
-                  />
-                )}
-                <ExperienceLocation
-                  title={experience.title}
-                  address={experience.address || experience.meetingPoint || ''}
-                  city={experience.city}
-                  latitude={experience.latitude}
-                  longitude={experience.longitude}
-                />
-              </div>
-            </div>
+            <ExperienceQualityVerified category={experience.category} />
 
-            {/* Bloque sticky: tarjeta alineada a la izquierda de la columna. lg:-mt-2 acerca la tarjeta al título (tipo Airbnb). */}
-            <div className="w-full lg:sticky lg:top-28 lg:self-start lg:-mt-2 z-10">
-              <ExperienceBookingCard
-                experienceId={experience.id}
-                pricePerParticipant={experience.pricePerParticipant}
-                currency={experience.currency}
-                originalPrice={originalPrice}
-                slots={slots}
-                onShowDates={() => setSelectTimeModalOpen(true)}
-              />
-            </div>
+            <ExperienceReportListing />
+
+            {/* Espaciador: hace que la fila del grid sea más alta que el contenido + viewport, así la columna izquierda sticky no se "alza" al hacer scroll hasta el final */}
+            <div className="lg:min-h-[150vh]" aria-hidden />
           </div>
         </div>
 
@@ -234,22 +229,14 @@ export default function ExperienceDetailPage() {
           slots={slots}
           pricePerParticipant={experience.pricePerParticipant}
           currency={experience.currency}
+          durationMinutes={experience.duration ?? 90}
+          imageUrl={images[0]}
           onSelectSlot={(slot, adults, children) => {
             setSelectTimeModalOpen(false)
             const q = new URLSearchParams({ slot: slot.id, adults: String(adults), children: String(children) })
             router.push(`/experiences/${experience.id}/book?${q.toString()}`)
           }}
         />
-
-        <section className="mt-16 pt-10 border-t border-neutral-200 text-center space-y-4">
-          <p className="text-sm text-neutral-600">Para proteger tus pagos, usa siempre Airbnb a la hora de transferir dinero y comunicarte con los anfitriones.</p>
-          <div className="pt-6 pb-2">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full border-2 border-amber-400/80 bg-amber-50/80 mb-3">
-              <span className="text-2xl" aria-hidden>◇</span>
-            </div>
-            <p className="font-semibold text-neutral-900">Recorridos culturales con calidad verificada</p>
-          </div>
-        </section>
       </div>
 
       <Footer />

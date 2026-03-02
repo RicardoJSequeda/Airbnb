@@ -1,9 +1,20 @@
 'use client'
 
-import { useState } from 'react'
-import { X, Calendar, Minus, Plus } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import Image from 'next/image'
+import { X, Calendar, Minus, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths } from 'date-fns'
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameDay,
+  addMonths,
+  isSameMonth,
+  addDays,
+  startOfWeek,
+} from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { ExperienceSlot } from './ExperienceBookingCard'
 
@@ -15,6 +26,10 @@ interface SelectTimeModalProps {
   slots: ExperienceSlot[]
   pricePerParticipant: number
   currency: string
+  /** Duración en minutos, ej. 90 → "1 h 30 min" */
+  durationMinutes?: number
+  /** URL de imagen para la sesión grupal (opcional) */
+  imageUrl?: string | null
   onSelectSlot: (slot: ExperienceSlot, adults: number, children: number) => void
 }
 
@@ -23,47 +38,134 @@ function formatPrice(price: number, currency: string) {
   return `${price.toLocaleString()} ${currency}`
 }
 
-function groupSlotsByDate(slots: ExperienceSlot[]) {
-  const map = new Map<string, ExperienceSlot[]>()
-  for (const slot of slots) {
-    const key = slot.dateLabel
-    if (!map.has(key)) map.set(key, [])
-    map.get(key)!.push(slot)
-  }
-  return Array.from(map.entries())
+function formatDuration(minutes: number) {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (m === 0) return `${h} h`
+  return `${h} h ${m} min`
 }
+
+/** Horarios fijos para Sesión grupal y Sesión Privada (9:00 a.m. – 3:30 p.m., cada 30 min) */
+const FIXED_TIME_LABELS = [
+  '9:00 a.m.',
+  '9:30 a.m.',
+  '10:00 a.m.',
+  '10:30 a.m.',
+  '11:00 a.m.',
+  '11:30 a.m.',
+  '12:00 p.m.',
+  '12:30 p.m.',
+  '1:00 p.m.',
+  '1:30 p.m.',
+  '2:00 p.m.',
+  '2:30 p.m.',
+  '3:00 p.m.',
+  '3:30 p.m.',
+]
+
+/** Calcula hora de fin sumando minutos (ej. 90 min → "10:30 a.m." desde "9:00 a.m.") */
+function addMinutesToTimeLabel(startLabel: string, durationMinutes: number): string {
+  const match = startLabel.match(/^(\d{1,2}):(\d{2})\s*(a\.m\.|p\.m\.)$/i)
+  if (!match) return `${startLabel} – `
+  let [, hStr, mStr, period] = match
+  let h = parseInt(hStr!, 10)
+  const m = parseInt(mStr!, 10)
+  if (period?.toLowerCase() === 'p.m.' && h !== 12) h += 12
+  if (period?.toLowerCase() === 'a.m.' && h === 12) h = 0
+  const totalMinutes = h * 60 + m + durationMinutes
+  const endH = Math.floor(totalMinutes / 60) % 24
+  const endM = totalMinutes % 60
+  const endPeriod = endH >= 12 ? 'p.m.' : 'a.m.'
+  const endH12 = endH % 12 || 12
+  return `${endH12}:${endM.toString().padStart(2, '0')} ${endPeriod}`
+}
+
+function buildSyntheticSlot(
+  selectedDate: Date,
+  timeLabel: string,
+  durationMinutes: number,
+  dateStr: string
+): ExperienceSlot {
+  const endLabel = addMinutesToTimeLabel(timeLabel, durationMinutes)
+  return {
+    id: `modal-${dateStr}-${timeLabel.replace(/\s|\./g, '')}`,
+    dateLabel: format(selectedDate, "EEEE d 'de' MMMM", { locale: es }),
+    timeRange: `${timeLabel} – ${endLabel}`,
+    spotsLeft: 10,
+    date: dateStr,
+  }
+}
+
+const SESSION_GROUP_IMAGE =
+  'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=120&h=120&fit=crop'
+const SESSION_PRIVATE_IMAGE =
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop'
 
 export default function SelectTimeModal({
   isOpen,
   onClose,
-  experienceId,
   experienceTitle,
   slots,
   pricePerParticipant,
   currency,
+  durationMinutes = 90,
+  imageUrl,
   onSelectSlot,
 }: SelectTimeModalProps) {
-  const [view, setView] = useState<'slots' | 'calendar'>('slots')
-  const [adults, setAdults] = useState(1)
-  const [children, setChildren] = useState(0)
-  const grouped = groupSlotsByDate(slots)
+  const [travelers, setTravelers] = useState(1)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
+    const d = addDays(new Date(), 1)
+    d.setHours(0, 0, 0, 0)
+    return d
+  })
+  /** Al hacer clic en el icono de calendario se muestra el modal con los 4 meses */
+  const [showAllMonths, setShowAllMonths] = useState(false)
 
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date())
+  /** Semana actual para la franja horizontal (lunes a domingo); se usa la semana que contiene la fecha seleccionada */
+  const weekStart = useMemo(() => {
+    const base = selectedDate ?? addDays(new Date(), 1)
+    return startOfWeek(base, { weekStartsOn: 1 })
+  }, [selectedDate])
+  const weekDays = useMemo(
+    () => [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(weekStart, i)),
+    [weekStart]
+  )
+  const displayMonth = selectedDate ?? addDays(new Date(), 1)
 
-  const monthStart = startOfMonth(calendarMonth)
-  const monthEnd = endOfMonth(calendarMonth)
-  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd })
-  // Lunes = 0 para la grilla (getDay: 0=Dom, 1=Lun... → (d + 6) % 7)
-  const startPadding = ((monthStart.getDay() + 6) % 7)
-  const paddingDays = Array.from({ length: startPadding }, (_, i) => null)
-  const gridDays = [...paddingDays, ...monthDays]
+  /** 4 meses a partir del actual para el modal de calendario */
+  const fourMonths = useMemo(() => {
+    const base = new Date()
+    base.setDate(1)
+    base.setHours(0, 0, 0, 0)
+    return [0, 1, 2, 3].map((i) => addMonths(base, i))
+  }, [])
 
-  const handleSlotClick = (slot: ExperienceSlot) => {
-    onSelectSlot(slot, adults, children)
+  const selectedDateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null
+
+  const handleTimeSlotClick = (timeLabel: string) => {
+    if (!selectedDate || !selectedDateStr) return
+    const slot = buildSyntheticSlot(
+      selectedDate,
+      timeLabel,
+      durationMinutes,
+      selectedDateStr
+    )
+    onSelectSlot(slot, travelers, 0)
     onClose()
   }
 
+  const durationLabel = formatDuration(durationMinutes)
+  const priceGroup = pricePerParticipant
+  const pricePrivate = Math.round(pricePerParticipant * 2.33)
+  const minGroup = Math.round(priceGroup * 1.33)
+
   if (!isOpen) return null
+
+  const modalTitle =
+    experienceTitle.toLowerCase().includes('foto') ||
+    experienceTitle.toLowerCase().includes('fotograf')
+      ? 'Programa tu sesión fotográfica'
+      : 'Programa tu experiencia'
 
   return (
     <AnimatePresence>
@@ -75,170 +177,312 @@ export default function SelectTimeModal({
         onClick={onClose}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
+          initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.96 }}
+          exit={{ opacity: 0, scale: 0.98 }}
           transition={{ duration: 0.2 }}
-          className="w-full max-w-lg max-h-[90vh] rounded-2xl bg-white shadow-xl flex flex-col overflow-hidden"
+          className="w-full max-w-[680px] max-h-[90vh] rounded-2xl bg-white shadow-xl flex flex-col overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-neutral-200 flex-shrink-0">
-            <h2 className="text-xl font-semibold text-neutral-900">Selecciona una hora</h2>
+          {/* ——— SECCIÓN 1: Header ——— */}
+          <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-200 flex-shrink-0">
+            <h2 className="text-[22px] font-semibold text-[#222222]">
+              {modalTitle}
+            </h2>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-neutral-100"
+              className="p-2 rounded-full hover:bg-neutral-100 text-neutral-700"
               aria-label="Cerrar"
             >
-              <X className="w-5 h-5 text-neutral-700" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Guest selector */}
-          <div className="px-4 py-3 border-b border-neutral-100 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-neutral-900">
-                {adults} {adults === 1 ? 'adulto' : 'adultos'}
+          <div className="flex-1 overflow-y-auto">
+            {/* ——— SECCIÓN 2: Viajeros ——— */}
+            <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
+              <span className="text-base text-[#222222]">
+                {travelers} {travelers === 1 ? 'viajero' : 'viajeros'}
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 border border-neutral-300 rounded-full overflow-hidden">
                 <button
                   type="button"
-                  onClick={() => setAdults((a) => Math.max(1, a - 1))}
-                  className="w-8 h-8 rounded-full border border-neutral-300 flex items-center justify-center hover:bg-neutral-50"
-                  aria-label="Menos adultos"
+                  onClick={() => setTravelers((n) => Math.max(1, n - 1))}
+                  className="w-10 h-10 flex items-center justify-center hover:bg-neutral-50 text-[#222222]"
+                  aria-label="Menos"
                 >
                   <Minus className="w-4 h-4" />
                 </button>
-                <span className="w-6 text-center text-sm font-medium">{adults}</span>
+                <span className="w-8 text-center text-sm font-medium text-[#222222]">
+                  {travelers}
+                </span>
                 <button
                   type="button"
-                  onClick={() => setAdults((a) => a + 1)}
-                  className="w-8 h-8 rounded-full border border-neutral-300 flex items-center justify-center hover:bg-neutral-50"
-                  aria-label="Más adultos"
+                  onClick={() => setTravelers((n) => n + 1)}
+                  className="w-10 h-10 flex items-center justify-center hover:bg-neutral-50 text-[#222222]"
+                  aria-label="Más"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
             </div>
-            <button
-              type="button"
-              className="text-sm text-neutral-600 underline hover:text-neutral-900"
-            >
-              Agregar niños
-            </button>
-          </div>
 
-          {view === 'slots' ? (
-            <>
-              {/* Month + calendar icon */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100">
-                <span className="text-sm font-medium text-neutral-900 capitalize">
-                  {format(new Date(), 'MMMM yyyy', { locale: es })}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setView('calendar')}
-                  className="p-2 rounded-lg hover:bg-neutral-100"
-                  aria-label="Ver calendario"
-                >
-                  <Calendar className="w-5 h-5 text-neutral-700" />
-                </button>
-              </div>
-
-              {/* Lista de horarios */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {grouped.map(([dateLabel, dateSlots]) => (
-                  <div key={dateLabel}>
-                    <p className="text-sm font-semibold text-neutral-900 mb-2">{dateLabel}</p>
-                    <div className="space-y-2">
-                      {dateSlots.map((slot) => (
-                        <button
-                          key={slot.id}
-                          type="button"
-                          onClick={() => handleSlotClick(slot)}
-                          className="w-full text-left rounded-xl border border-[#EBEBEB] bg-white p-4 hover:border-black hover:shadow-sm transition-all"
-                        >
-                          <div className="flex items-center justify-between gap-4">
-                            <div>
-                              <p className="text-base font-medium text-neutral-900">{slot.timeRange}</p>
-                              <p className="text-sm text-neutral-500 mt-0.5">
-                                {formatPrice(pricePerParticipant, currency)} por persona
-                              </p>
-                              <p className="text-xs text-neutral-400 mt-0.5">
-                                Precios para experiencias privadas disponibles
-                              </p>
-                            </div>
-                            <span className="text-sm text-neutral-500 whitespace-nowrap">
-                              {slot.spotsLeft} cupos disponibles
-                            </span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+            {/* ——— SECCIÓN 3: Calendario ——— */}
+            <div className="px-6 py-4 border-b border-neutral-100">
+              {showAllMonths ? (
+                /* Modal de 4 meses (al hacer clic en el icono de calendario) */
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-base font-medium text-[#222222] capitalize">
+                      Calendario
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAllMonths(false)}
+                      className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-600 bg-neutral-100"
+                      aria-label="Volver a la vista de semana"
+                    >
+                      <Calendar className="w-5 h-5" />
+                    </button>
                   </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Vista calendario */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100">
-                <span className="text-sm font-medium text-neutral-900 capitalize">
-                  {format(calendarMonth, 'MMMM yyyy', { locale: es })}
-                </span>
-                <div className="flex gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setCalendarMonth((m) => addMonths(m, -1))}
-                    className="p-2 rounded-lg hover:bg-neutral-100 text-sm"
-                  >
-                    ←
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCalendarMonth((m) => addMonths(m, 1))}
-                    className="p-2 rounded-lg hover:bg-neutral-100 text-sm"
-                  >
-                    →
-                  </button>
+                  <div className="max-h-[320px] overflow-y-auto overflow-x-hidden pr-1">
+                    {fourMonths.map((month) => {
+                      const mStart = startOfMonth(month)
+                      const mEnd = endOfMonth(month)
+                      const mDays = eachDayOfInterval({ start: mStart, end: mEnd })
+                      const pad = (mStart.getDay() + 6) % 7
+                      const padArr = Array.from({ length: pad }, () => null)
+                      const days = [...padArr, ...mDays]
+                      return (
+                        <div key={month.getTime()} className="mb-6 last:mb-2">
+                          <p className="text-sm font-medium text-[#222222] capitalize mb-2">
+                            {format(month, 'MMMM yyyy', { locale: es })}
+                          </p>
+                          <div className="grid grid-cols-7 gap-0.5 text-center text-xs text-neutral-500 mb-1">
+                            {['L', 'Ma', 'Mi', 'J', 'V', 'S', 'D'].map((d) => (
+                              <span key={d}>{d}</span>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-7 gap-0.5">
+                            {days.map((day, i) => {
+                              if (day === null) {
+                                return <div key={`p-${i}`} className="aspect-square min-w-[28px]" />
+                              }
+                              const isCurrMonth = isSameMonth(day, month)
+                              const isSelected = selectedDate ? isSameDay(day, selectedDate) : false
+                              const today = new Date()
+                              today.setHours(0, 0, 0, 0)
+                              const dayStart = new Date(day)
+                              dayStart.setHours(0, 0, 0, 0)
+                              const isPast = dayStart < today
+                              return (
+                                <button
+                                  key={day.toISOString()}
+                                  type="button"
+                                  disabled={isPast}
+                                  onClick={() => {
+                                    setSelectedDate(day)
+                                    setShowAllMonths(false)
+                                  }}
+                                  className={`aspect-square min-w-[28px] max-w-[36px] rounded-full text-xs font-medium flex items-center justify-center transition-colors ${
+                                    !isCurrMonth
+                                      ? 'text-neutral-300'
+                                      : isPast
+                                        ? 'text-neutral-300 cursor-not-allowed'
+                                        : isSelected
+                                          ? 'bg-[#222222] text-white'
+                                          : 'text-[#222222] hover:bg-neutral-100'
+                                  }`}
+                                >
+                                  {format(day, 'd')}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              ) : (
+                /* Franja horizontal: una semana (L–D) con mes/año e icono de calendario */
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-base font-semibold text-[#222222] capitalize">
+                      {format(displayMonth, 'MMMM yyyy', { locale: es })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAllMonths(true)}
+                      className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-600"
+                      aria-label="Ver calendario completo"
+                    >
+                      <Calendar className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 text-center">
+                    {['L', 'Ma', 'Mi', 'J', 'V', 'S', 'D'].map((d) => (
+                      <span key={d} className="text-xs text-neutral-500 font-medium pb-1">
+                        {d}
+                      </span>
+                    ))}
+                    {weekDays.map((day) => {
+                      const isCurrMonth = isSameMonth(day, displayMonth)
+                      const isSelected = selectedDate ? isSameDay(day, selectedDate) : false
+                      const today = new Date()
+                      today.setHours(0, 0, 0, 0)
+                      const dayStart = new Date(day)
+                      dayStart.setHours(0, 0, 0, 0)
+                      const isPast = dayStart < today
+                      return (
+                        <button
+                          key={day.toISOString()}
+                          type="button"
+                          disabled={isPast}
+                          onClick={() => setSelectedDate(day)}
+                          className={`aspect-square min-w-[36px] rounded-full text-sm font-medium flex items-center justify-center transition-colors ${
+                            !isCurrMonth
+                              ? 'text-neutral-400'
+                              : isPast
+                                ? 'text-neutral-300 cursor-not-allowed'
+                                : isSelected
+                                  ? 'bg-[#222222] text-white'
+                                  : 'text-[#222222] hover:bg-neutral-100'
+                          }`}
+                        >
+                          {format(day, 'd')}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="flex justify-center gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedDate(addDays(selectedDate ?? weekStart, -7))
+                      }
+                      className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-600"
+                      aria-label="Semana anterior"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedDate(addDays(selectedDate ?? weekStart, 7))
+                      }
+                      className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-600"
+                      aria-label="Semana siguiente"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* ——— SECCIÓN 4: Sesión grupal y Sesión privada ——— */}
+            <div className="px-6 py-5 space-y-6">
+              {/* Sesión grupal */}
+              <div className="border border-neutral-200 rounded-2xl p-4 overflow-hidden">
+                <div className="flex gap-4">
+                  <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-neutral-100 flex-shrink-0">
+                    {imageUrl ? (
+                      <Image
+                        src={imageUrl}
+                        alt="Sesión grupal"
+                        fill
+                        className="object-cover"
+                        sizes="80px"
+                      />
+                    ) : (
+                      <Image
+                        src={SESSION_GROUP_IMAGE}
+                        alt="Sesión grupal"
+                        fill
+                        className="object-cover"
+                        sizes="80px"
+                      />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-semibold text-[#222222]">
+                      Sesión grupal
+                    </h3>
+                    <p className="text-sm text-neutral-600 mt-0.5">
+                      {formatPrice(priceGroup, currency)} por persona
+                    </p>
+                    <p className="text-sm text-neutral-600">
+                      Mínimo {formatPrice(minGroup, currency)} · {durationLabel}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="p-4">
-                <div className="grid grid-cols-7 gap-1 text-center text-xs text-neutral-500 mb-2">
-                  {['L', 'Ma', 'Mi', 'J', 'V', 'S', 'D'].map((d) => (
-                    <span key={d}>{d}</span>
-                  ))}
-                </div>
-                <div className="grid grid-cols-7 gap-1">
-                  {gridDays.map((day, i) => {
-                    if (day === null)
-                      return <div key={`pad-${i}`} className="aspect-square" />
-                    const isPast = day < new Date() && !isSameDay(day, new Date())
-                    return (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {selectedDateStr ? (
+                    FIXED_TIME_LABELS.map((label) => (
                       <button
-                        key={day.toISOString()}
+                        key={label}
                         type="button"
-                        disabled={isPast}
-                        className={`aspect-square rounded-lg text-sm font-medium flex items-center justify-center ${
-                          isPast ? 'text-neutral-300' : 'text-neutral-900 hover:bg-neutral-100'
-                        }`}
+                        onClick={() => handleTimeSlotClick(label)}
+                        className="px-4 py-2.5 rounded-lg border border-neutral-300 bg-white text-sm font-medium text-[#222222] hover:border-[#222222] hover:bg-neutral-50 transition-colors"
                       >
-                        {format(day, 'd')}
+                        {label}
                       </button>
-                    )
-                  })}
+                    ))
+                  ) : (
+                    <p className="text-sm text-neutral-500">
+                      Selecciona una fecha para ver horarios
+                    </p>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setView('slots')}
-                  className="mt-4 w-full py-2 text-sm font-medium text-neutral-600 hover:text-neutral-900"
-                >
-                  Volver a horarios
-                </button>
               </div>
-            </>
-          )}
+
+              {/* Sesión privada */}
+              <div className="border border-neutral-200 rounded-2xl p-4 overflow-hidden">
+                <div className="flex gap-4">
+                  <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-neutral-100 flex-shrink-0">
+                    <Image
+                      src={SESSION_PRIVATE_IMAGE}
+                      alt="Sesión privada"
+                      fill
+                      className="object-cover"
+                      sizes="80px"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-semibold text-[#222222]">
+                      Sesión Privada
+                    </h3>
+                    <p className="text-sm text-neutral-600 mt-0.5">
+                      {formatPrice(pricePrivate, currency)} por persona
+                    </p>
+                    <p className="text-sm text-neutral-600">
+                      {durationLabel}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {selectedDateStr ? (
+                    FIXED_TIME_LABELS.map((label) => (
+                      <button
+                        key={`private-${label}`}
+                        type="button"
+                        onClick={() => handleTimeSlotClick(label)}
+                        className="px-4 py-2.5 rounded-lg border border-neutral-300 bg-white text-sm font-medium text-[#222222] hover:border-[#222222] hover:bg-neutral-50 transition-colors"
+                      >
+                        {label}
+                      </button>
+                    ))
+                  ) : (
+                    <p className="text-sm text-neutral-500">
+                      Selecciona una fecha para ver horarios
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
