@@ -155,6 +155,10 @@ export class ReviewsService {
             city: true,
             country: true,
             images: true,
+            propertyImages: {
+              select: { imageUrl: true, displayOrder: true },
+              orderBy: { displayOrder: 'asc' },
+            },
           },
         },
       },
@@ -167,7 +171,7 @@ export class ReviewsService {
       ...review,
       property: {
         ...review.property,
-        images: JSON.parse(review.property.images || '[]'),
+        images: this.getPropertyImages(review.property),
       },
     }));
   }
@@ -274,6 +278,24 @@ export class ReviewsService {
     });
 
     return { message: 'Review deleted successfully' };
+  }
+
+  private getPropertyImages(property: {
+    images?: string | null;
+    propertyImages?: Array<{ imageUrl: string; displayOrder: number }>;
+  }) {
+    if (Array.isArray(property.propertyImages)) {
+      return property.propertyImages
+        .slice()
+        .sort((a, b) => a.displayOrder - b.displayOrder)
+        .map((image) => image.imageUrl);
+    }
+
+    try {
+      return JSON.parse(property.images || '[]');
+    } catch {
+      return [];
+    }
   }
 
   private calculateRatingBreakdown(reviews: any[]) {

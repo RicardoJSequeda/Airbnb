@@ -1,21 +1,34 @@
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
-import Link from 'next/link'
+import ServiceCategoryList from '@/components/services/ServiceCategoryList'
+import ServiceOffersSection from '@/components/services/ServiceOffersSection'
+import ServicesSearchBar from '@/components/services/ServicesSearchBar'
+import { serviceCategories, servicesSections } from '@/components/services/data'
 
 export default function ServicesPage() {
   return (
     <main className="min-h-screen bg-white">
       <Header />
       <div className="h-20" />
-      <div className="max-w-[720px] mx-auto px-6 py-16">
-        <h1 className="text-3xl font-semibold text-secondary mb-4">Servicios</h1>
-        <p className="text-secondary leading-relaxed mb-6">
-          Servicios premium. Esta seccion se desarrollara proximamente.
-        </p>
-        <Link href="/" className="text-primary font-medium hover:underline">
-          Volver al inicio
-        </Link>
-      </div>
+
+      <section className="border-b border-[#EBEBEB] bg-[#F7F7F7] px-6 pb-12 pt-6">
+        <ServicesSearchBar />
+      </section>
+
+      <section className="bg-[#F7F7F7] pb-10">
+        <ServiceCategoryList title="Servicios en Bogotá" categories={serviceCategories} />
+
+        <div className="mx-auto w-full max-w-[1600px] px-6 pb-2">
+          <h2 className="text-4xl font-medium tracking-tight text-[#222222] md:text-6xl">
+            Descubre los servicios disponibles en Airbnb
+          </h2>
+        </div>
+
+        {servicesSections.map((section) => (
+          <ServiceOffersSection key={section.id} section={section} />
+        ))}
+      </section>
+
       <Footer />
     </main>
   )

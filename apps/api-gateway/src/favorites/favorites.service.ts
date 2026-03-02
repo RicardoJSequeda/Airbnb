@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 
@@ -50,6 +49,10 @@ export class FavoritesService {
             city: true,
             country: true,
             images: true,
+            propertyImages: {
+              select: { imageUrl: true, displayOrder: true },
+              orderBy: { displayOrder: 'asc' },
+            },
           },
         },
       },
@@ -59,7 +62,7 @@ export class FavoritesService {
       ...favorite,
       property: {
         ...favorite.property,
-        images: JSON.parse(favorite.property.images || '[]'),
+        images: this.getPropertyImages(favorite.property),
       },
     };
   }
@@ -150,6 +153,10 @@ export class FavoritesService {
             bedrooms: true,
             bathrooms: true,
             images: true,
+            propertyImages: {
+              select: { imageUrl: true, displayOrder: true },
+              orderBy: { displayOrder: 'asc' },
+            },
             host: {
               select: {
                 id: true,
@@ -169,7 +176,7 @@ export class FavoritesService {
       ...favorite,
       property: {
         ...favorite.property,
-        images: JSON.parse(favorite.property.images || '[]'),
+        images: this.getPropertyImages(favorite.property),
       },
     }));
   }
@@ -195,5 +202,23 @@ export class FavoritesService {
 
     const count = await this.prisma.favorite.count({ where });
     return { count };
+  }
+
+  private getPropertyImages(property: {
+    images?: string | null;
+    propertyImages?: Array<{ imageUrl: string; displayOrder: number }>;
+  }) {
+    if (Array.isArray(property.propertyImages)) {
+      return property.propertyImages
+        .slice()
+        .sort((a, b) => a.displayOrder - b.displayOrder)
+        .map((image) => image.imageUrl);
+    }
+
+    try {
+      return JSON.parse(property.images || '[]');
+    } catch {
+      return [];
+    }
   }
 }
