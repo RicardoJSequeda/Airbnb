@@ -53,3 +53,22 @@
 - Use different secrets for development/production
 - Rotate secrets periodically
 - Use strong, randomly generated secrets (min 32 characters)
+
+## 🧱 Arquitectura (Hexagonal + DDD + Clean en Monolito Modular)
+
+El backend ahora se organiza por **Bounded Contexts** y capacidades de plataforma:
+
+- `src/contexts/bookings`
+- `src/contexts/payments`
+- `src/contexts/users`
+- `src/contexts/listings`
+- `src/platform/*` (messaging, resilience, idempotency, observability)
+
+Esto permite evolucionar hacia Event-Driven sin reescribir los módulos de dominio/aplicación.
+
+### Capacidades transversales activas
+
+- **Correlation ID global** en `x-correlation-id` (entrada/salida).
+- **Idempotency key global** para operaciones mutables (`POST/PUT/PATCH/DELETE`) usando header `x-idempotency-key`.
+- **Base de resiliencia** con servicios para retry con backoff y circuit breaker.
+- **Adapter de Kafka** (`KafkaPublisherService`) listo para conectar broker real sin cambiar casos de uso.
