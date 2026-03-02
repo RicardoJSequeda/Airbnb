@@ -1,32 +1,35 @@
 import { Injectable } from '@nestjs/common';
-
-interface IdempotencyRecord {
-  key: string;
-  method: string;
-  path: string;
-  createdAt: number;
-}
+import { RedisService } from '../../common/redis.service';
 
 @Injectable()
 export class IdempotencyService {
-  private readonly records = new Map<string, IdempotencyRecord>();
+  private readonly fallback = new Map<string, number>();
+
+  constructor(private readonly redisService: RedisService) {}
 
   private buildScope(method: string, path: string, key: string): string {
-    return `${method.toUpperCase()}:${path}:${key}`;
+    return `idempotency:${method.toUpperCase()}:${path}:${key}`;
   }
 
-  register(method: string, path: string, key: string): boolean {
+  async register(
+    method: string,
+    path: string,
+    key: string,
+    ttlSeconds: number,
+  ): Promise<boolean> {
     const scope = this.buildScope(method, path, key);
-    if (this.records.has(scope)) {
+
+    if (this.redisService.isAvailable()) {
+      return this.redisService.trySetNx(scope, String(Date.now()), ttlSeconds);
+    }
+
+    const now = Date.now();
+    const existing = this.fallback.get(scope);
+    if (existing && existing > now) {
       return false;
     }
 
-    this.records.set(scope, {
-      key,
-      method: method.toUpperCase(),
-      path,
-      createdAt: Date.now(),
-    });
+    this.fallback.set(scope, now + ttlSeconds * 1000);
     return true;
   }
 }

@@ -217,3 +217,23 @@ Consideraciones clave:
 - [ ] Idempotency key aplicada en endpoints críticos y handlers asíncronos.
 - [ ] Trazas distribuidas enlazan request HTTP → DB → evento Kafka → consumidor.
 - [ ] Runbook multi-región documentado y probado con simulacros.
+
+
+## 7) Estado de implementación en este repositorio
+
+Implementado en código (baseline):
+
+- Módulos de contexto: `contexts/bookings`, `contexts/payments`, `contexts/users`, `contexts/listings`.
+- Capa `platform` con:
+  - Observabilidad básica por `CorrelationIdInterceptor`.
+  - Idempotencia declarativa por endpoint con `@RequireIdempotency()` + Redis (`SET NX EX`) y fallback in-memory.
+  - Resilience services (`executeWithRetry`, `CircuitBreakerService`).
+  - Outbox relay (`OutboxRelayService`) que lee `outbox_events`, publica por adapter Kafka y marca `processedAt`.
+- `docker-compose` migrado a Kafka-compatible runtime (Redpanda) para pruebas locales de eventing real.
+
+Pendiente (siguiente iteración):
+
+- Conectar `KafkaPublisherService` a cliente real (`kafkajs`) y gestión de topic provisioning.
+- Persistencia de idempotencia con modelo propio en BD para auditoría y TTL cleaning.
+- Telemetría OTEL completa (traces/metrics/logs) y dashboards operativos.
+- Separación física de DB por bounded context (hoy: logical modularization sobre schema único).
