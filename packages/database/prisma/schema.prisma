@@ -7,10 +7,14 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+  schemas   = ["users", "listings", "bookings", "payments", "platform"]
+
  codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
   schemas   = ["users", "listings", "bookings", "payments", "platform"]
 
   schemas   = ["users", "listings", "bookings", "payments"]
+ main
  main
 }
 
@@ -210,9 +214,14 @@ model Payment {
   bookingId             String        @unique
   organizationId        String
   organization          Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+  tenantId              String        @default("default")
+  regionId              String        @default("global")
+
  codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
   tenantId              String        @default("default")
   regionId              String        @default("global")
+ main
  main
   amount                Decimal       @db.Decimal(10, 2)
   currency              String        @default("usd")
@@ -299,20 +308,30 @@ model City {
 // ==================== OUTBOX EVENTS ====================
 model OutboxEvent {
   id             String    @id @default(uuid())
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+  eventId        String    @unique @default(uuid())
+
  codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
   eventId        String    @unique @default(uuid())
+ main
  main
   aggregateId    String
   type           String
   version        String    @default("v1")
   payload        Json
   correlationId  String?
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+  tenantId       String    @default("default")
+  regionId       String    @default("global")
+  retryCount     Int       @default(0)
+
  codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
   tenantId       String    @default("default")
   regionId       String    @default("global")
   retryCount     Int       @default(0)
 
   attempts       Int       @default(0)
+ main
  main
   nextRetryAt    DateTime?
   lastError      String?
@@ -323,6 +342,12 @@ model OutboxEvent {
   @@index([aggregateId])
   @@index([type])
   @@index([processedAt, nextRetryAt])
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+  @@index([tenantId, regionId, processedAt])
+  @@index([deadLetteredAt])
+  @@map("outbox_events")
+  @@schema("platform")
+
  codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
   @@index([tenantId, regionId, processedAt])
   @@index([deadLetteredAt])
@@ -332,6 +357,7 @@ model OutboxEvent {
   @@index([deadLetteredAt])
   @@map("outbox_events")
   @@schema("bookings")
+ main
  main
 }
 
@@ -348,22 +374,32 @@ model OutboxDeadLetter {
   @@index([outboxEventId])
   @@index([failedAt])
   @@map("outbox_dead_letter")
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+  @@schema("platform")
+
  codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
   @@schema("platform")
 
   @@schema("bookings")
+ main
  main
 }
 
 model IdempotencyRecord {
   id             String   @id @default(uuid())
   scopeKey       String   @unique
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+
  codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+ main
   actorId        String
   operation      String
   tenantId       String   @default("default")
   regionId       String   @default("global")
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+
 > main
+ main
   method         String
   path           String
   idempotencyKey String
@@ -374,7 +410,10 @@ model IdempotencyRecord {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+
  codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+ main
   @@unique([idempotencyKey, actorId, operation])
   @@index([expiresAt])
   @@index([method, path])
@@ -439,11 +478,14 @@ model ConsumedEvent {
   @@index([topic, processedAt])
   @@map("consumed_events")
   @@schema("platform")
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+
 
   @@index([expiresAt])
   @@index([method, path])
   @@map("idempotency_records")
   @@schema("payments")
+ main
  main
 }
 
@@ -578,9 +620,14 @@ model ExperiencePayment {
   bookingId             String        @unique
   organizationId        String
   organization          Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+  tenantId              String        @default("default")
+  regionId              String        @default("global")
+
  codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
   tenantId              String        @default("default")
   regionId              String        @default("global")
+ main
  main
   amount                Decimal       @db.Decimal(10, 2)
   currency              String        @default("usd")

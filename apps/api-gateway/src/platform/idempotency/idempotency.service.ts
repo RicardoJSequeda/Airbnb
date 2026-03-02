@@ -1,4 +1,3 @@
- codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
 import {
   Injectable,
   Logger,
@@ -9,11 +8,6 @@ import { createHash } from 'node:crypto';
 import { PrismaIdempotencyClient } from './infrastructure/prisma-idempotency.client';
 import { MetricsService } from '../observability/metrics.service';
 
-import { Injectable } from '@nestjs/common';
-import { createHash } from 'node:crypto';
-import { PrismaService } from '../../common/prisma.service';
- main
-
 interface StoredResponse {
   responseCode: number;
   responseBody: unknown;
@@ -22,11 +16,8 @@ interface StoredResponse {
 interface IdempotencyRecordEntity {
   id: string;
   scopeKey: string;
- codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
   actorId: string;
   operation: string;
-
- main
   method: string;
   path: string;
   idempotencyKey: string;
@@ -37,7 +28,6 @@ interface IdempotencyRecordEntity {
 }
 
 @Injectable()
- codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
 export class IdempotencyService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(IdempotencyService.name);
   private cleanupTimer?: NodeJS.Timeout;
@@ -65,16 +55,11 @@ export class IdempotencyService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-export class IdempotencyService {
-  constructor(private readonly prisma: PrismaService) {}
- main
-
   hashPayload(payload: unknown): string {
     const normalized = JSON.stringify(payload ?? {});
     return createHash('sha256').update(normalized).digest('hex');
   }
 
- codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
   buildScope(
     method: string,
     path: string,
@@ -89,13 +74,6 @@ export class IdempotencyService {
     operation: string;
     tenantId?: string;
     regionId?: string;
-
-  buildScope(method: string, path: string, key: string): string {
-    return `${method.toUpperCase()}:${path}:${key}`;
-  }
-
-  async reserve(params: {
- main
     method: string;
     path: string;
     key: string;
@@ -106,7 +84,6 @@ export class IdempotencyService {
   > {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + params.ttlSeconds * 1000);
- codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
     const scopeKey = this.buildScope(
       params.method,
       params.path,
@@ -123,26 +100,6 @@ export class IdempotencyService {
     if (existing && existing.expiresAt > now) {
       if (existing.payloadHash !== params.payloadHash) {
         this.metrics.inc('idempotency_duplicates_total');
-
-    const scopeKey = this.buildScope(params.method, params.path, params.key);
-
-    const prismaAny = this.prisma as unknown as {
-      idempotencyRecord?: {
-        findUnique: (args: unknown) => Promise<IdempotencyRecordEntity | null>;
-        create: (args: unknown) => Promise<IdempotencyRecordEntity>;
-      };
-    };
-
-    const model = prismaAny.idempotencyRecord;
-    if (!model?.findUnique || !model?.create) {
-      return 'reserved';
-    }
-
-    const existing = await model.findUnique({ where: { scopeKey } });
-
-    if (existing && existing.expiresAt > now) {
-      if (existing.payloadHash !== params.payloadHash) {
- main
         return 'payload_mismatch';
       }
 
@@ -153,21 +110,17 @@ export class IdempotencyService {
         };
       }
 
- codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
       this.metrics.inc('idempotency_duplicates_total');
- main
       return 'duplicate_pending';
     }
 
     await model.create({
       data: {
         scopeKey,
- codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
         actorId: params.actorId,
         operation: params.operation,
         tenantId: params.tenantId ?? 'default',
         regionId: params.regionId ?? 'global',
- main
         method: params.method.toUpperCase(),
         path: params.path,
         idempotencyKey: params.key,
@@ -180,16 +133,13 @@ export class IdempotencyService {
   }
 
   async saveResponse(params: {
- codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
     actorId: string;
-> main
     method: string;
     path: string;
     key: string;
     responseCode: number;
     responseBody: unknown;
   }): Promise<void> {
- codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
     const scopeKey = this.buildScope(
       params.method,
       params.path,
@@ -198,17 +148,6 @@ export class IdempotencyService {
     );
 
     await this.prisma.idempotencyRecord.updateMany({
-
-    const scopeKey = this.buildScope(params.method, params.path, params.key);
-
-    const prismaAny = this.prisma as unknown as {
-      idempotencyRecord?: {
-        updateMany: (args: unknown) => Promise<unknown>;
-      };
-    };
-
-    await prismaAny.idempotencyRecord?.updateMany({
- main
       where: { scopeKey },
       data: {
         responseCode: params.responseCode,
@@ -216,7 +155,6 @@ export class IdempotencyService {
       },
     });
   }
- codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
 
   private async cleanupExpired(): Promise<void> {
     const deleted = await this.prisma.idempotencyRecord.deleteMany({
@@ -227,5 +165,4 @@ export class IdempotencyService {
       this.logger.debug(`Expired idempotency records cleaned=${deleted.count}`);
     }
   }
- main
 }

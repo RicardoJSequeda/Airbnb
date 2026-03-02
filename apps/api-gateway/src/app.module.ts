@@ -2,8 +2,12 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+import { DistributedRateLimitGuard } from './common/guards/distributed-rate-limit.guard';
+
  codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
 import { DistributedRateLimitGuard } from './common/guards/distributed-rate-limit.guard';
+ main
  main
 import { RedisModule } from './common/redis.module';
 import { HealthModule } from './health/health.module';
@@ -41,11 +45,17 @@ import { IdempotencyInterceptor } from './platform/idempotency/idempotency.inter
       useClass: ThrottlerGuard,
     },
     {
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+
  codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
+ main
       provide: APP_GUARD,
       useClass: DistributedRateLimitGuard,
     },
     {
+ codex/implementar-arquitectura-hexagonal-y-ddd-1e30tj
+
+ main
  main
       provide: APP_INTERCEPTOR,
       useClass: CorrelationIdInterceptor,

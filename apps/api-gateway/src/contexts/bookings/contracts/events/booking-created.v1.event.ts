@@ -1,4 +1,3 @@
- codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
 import {
   assertMetadata,
   assertNumber,
@@ -8,13 +7,6 @@ import {
 } from '../../../shared-kernel/events/base-integration.event';
 
 export const BOOKING_CREATED_V1_TOPIC = 'booking.created.v1';
-
-export interface EventMetadataV1 {
-  eventId: string;
-  occurredAt: string;
-  correlationId: string;
-}
- main
 
 export interface BookingCreatedV1Payload {
   bookingId: string;
@@ -28,7 +20,6 @@ export interface BookingCreatedV1Payload {
   currency: string;
 }
 
- codex/implementar-arquitectura-hexagonal-y-ddd-8yidz5
 export type BookingCreatedV1Event = BaseIntegrationEvent<
   'booking.created',
   BookingCreatedV1Payload
