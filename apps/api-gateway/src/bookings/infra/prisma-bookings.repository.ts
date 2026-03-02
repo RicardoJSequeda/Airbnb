@@ -144,6 +144,8 @@ export class PrismaBookingsRepository implements IBookingsRepository {
               data: outboxEvents.map((e: DomainEvent) => ({
                 aggregateId: b.id,
                 type: e.type,
+                version: e.version ?? 'v1',
+                correlationId: e.correlationId ?? null,
                 payload: e.payload,
               })),
             });
@@ -227,6 +229,8 @@ export class PrismaBookingsRepository implements IBookingsRepository {
             data: outboxEvents.map((e: DomainEvent) => ({
               aggregateId: id,
               type: e.type,
+              version: e.version ?? 'v1',
+              correlationId: e.correlationId ?? null,
               payload: e.payload,
             })),
           });

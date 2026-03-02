@@ -7,8 +7,8 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Observable, from } from 'rxjs';
-import { mergeMap } from 'rxjs/operators';
+import { Observable, from, of } from 'rxjs';
+import { mergeMap, tap } from 'rxjs/operators';
 import {
   IDEMPOTENCY_REQUIRED_KEY,
   IDEMPOTENCY_TTL_SECONDS_KEY,
@@ -19,7 +19,12 @@ interface RequestWithHeaders {
   method: string;
   route?: { path?: string };
   path?: string;
+  body?: unknown;
   headers?: Record<string, string | string[] | undefined>;
+}
+
+interface ResponseLike {
+  statusCode?: number;
 }
 
 @Injectable()
@@ -40,6 +45,8 @@ export class IdempotencyInterceptor implements NestInterceptor {
     }
 
     const request = context.switchToHttp().getRequest<RequestWithHeaders>();
+    const response = context.switchToHttp().getResponse<ResponseLike>();
+
     const header = request.headers?.['x-idempotency-key'];
     const key = typeof header === 'string' ? header.trim() : '';
 
@@ -56,16 +63,45 @@ export class IdempotencyInterceptor implements NestInterceptor {
       ]) ?? 3600;
 
     const path = request.route?.path ?? request.path ?? 'unknown-path';
+    const payloadHash = this.idempotency.hashPayload(request.body);
 
     return from(
-      this.idempotency.register(request.method, path, key, ttlSeconds),
+      this.idempotency.reserve({
+        method: request.method,
+        path,
+        key,
+        payloadHash,
+        ttlSeconds,
+      }),
     ).pipe(
-      mergeMap((accepted) => {
-        if (!accepted) {
-          throw new ConflictException('Duplicate idempotent request detected');
+      mergeMap((result) => {
+        if (result === 'payload_mismatch') {
+          throw new ConflictException(
+            'Idempotency key already used with a different payload',
+          );
         }
 
-        return next.handle();
+        if (result === 'duplicate_pending') {
+          throw new ConflictException(
+            'Duplicate idempotent request in progress',
+          );
+        }
+
+        if (result !== 'reserved') {
+          return of(result.responseBody);
+        }
+
+        return next.handle().pipe(
+          tap((body) => {
+            void this.idempotency.saveResponse({
+              method: request.method,
+              path,
+              key,
+              responseCode: response.statusCode ?? 200,
+              responseBody: body,
+            });
+          }),
+        );
       }),
     );
   }

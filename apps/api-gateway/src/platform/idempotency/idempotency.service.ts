@@ -1,35 +1,114 @@
 import { Injectable } from '@nestjs/common';
-import { RedisService } from '../../common/redis.service';
+import { createHash } from 'node:crypto';
+import { PrismaService } from '../../common/prisma.service';
+
+interface StoredResponse {
+  responseCode: number;
+  responseBody: unknown;
+}
+
+interface IdempotencyRecordEntity {
+  id: string;
+  scopeKey: string;
+  method: string;
+  path: string;
+  idempotencyKey: string;
+  payloadHash: string;
+  responseCode: number | null;
+  responseBody: unknown;
+  expiresAt: Date;
+}
 
 @Injectable()
 export class IdempotencyService {
-  private readonly fallback = new Map<string, number>();
+  constructor(private readonly prisma: PrismaService) {}
 
-  constructor(private readonly redisService: RedisService) {}
-
-  private buildScope(method: string, path: string, key: string): string {
-    return `idempotency:${method.toUpperCase()}:${path}:${key}`;
+  hashPayload(payload: unknown): string {
+    const normalized = JSON.stringify(payload ?? {});
+    return createHash('sha256').update(normalized).digest('hex');
   }
 
-  async register(
-    method: string,
-    path: string,
-    key: string,
-    ttlSeconds: number,
-  ): Promise<boolean> {
-    const scope = this.buildScope(method, path, key);
+  buildScope(method: string, path: string, key: string): string {
+    return `${method.toUpperCase()}:${path}:${key}`;
+  }
 
-    if (this.redisService.isAvailable()) {
-      return this.redisService.trySetNx(scope, String(Date.now()), ttlSeconds);
+  async reserve(params: {
+    method: string;
+    path: string;
+    key: string;
+    payloadHash: string;
+    ttlSeconds: number;
+  }): Promise<
+    'reserved' | 'payload_mismatch' | 'duplicate_pending' | StoredResponse
+  > {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + params.ttlSeconds * 1000);
+    const scopeKey = this.buildScope(params.method, params.path, params.key);
+
+    const prismaAny = this.prisma as unknown as {
+      idempotencyRecord?: {
+        findUnique: (args: unknown) => Promise<IdempotencyRecordEntity | null>;
+        create: (args: unknown) => Promise<IdempotencyRecordEntity>;
+      };
+    };
+
+    const model = prismaAny.idempotencyRecord;
+    if (!model?.findUnique || !model?.create) {
+      return 'reserved';
     }
 
-    const now = Date.now();
-    const existing = this.fallback.get(scope);
-    if (existing && existing > now) {
-      return false;
+    const existing = await model.findUnique({ where: { scopeKey } });
+
+    if (existing && existing.expiresAt > now) {
+      if (existing.payloadHash !== params.payloadHash) {
+        return 'payload_mismatch';
+      }
+
+      if (existing.responseCode !== null) {
+        return {
+          responseCode: existing.responseCode,
+          responseBody: existing.responseBody,
+        };
+      }
+
+      return 'duplicate_pending';
     }
 
-    this.fallback.set(scope, now + ttlSeconds * 1000);
-    return true;
+    await model.create({
+      data: {
+        scopeKey,
+        method: params.method.toUpperCase(),
+        path: params.path,
+        idempotencyKey: params.key,
+        payloadHash: params.payloadHash,
+        expiresAt,
+      },
+    });
+
+    return 'reserved';
+  }
+
+  async saveResponse(params: {
+    method: string;
+    path: string;
+    key: string;
+    responseCode: number;
+    responseBody: unknown;
+  }): Promise<void> {
+    const scopeKey = this.buildScope(params.method, params.path, params.key);
+
+    const prismaAny = this.prisma as unknown as {
+      idempotencyRecord?: {
+        updateMany: (args: unknown) => Promise<unknown>;
+      };
+    };
+
+    await prismaAny.idempotencyRecord?.updateMany({
+      where: { scopeKey },
+      data: {
+        responseCode: params.responseCode,
+        responseBody: params.responseBody as object,
+      },
+    });
   }
 }

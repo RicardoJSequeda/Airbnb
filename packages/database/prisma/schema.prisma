@@ -1,11 +1,13 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  schemas   = ["users", "listings", "bookings", "payments"]
 }
 
 enum UserRole {
@@ -13,18 +15,24 @@ enum UserRole {
   HOST
   ADMIN
   SUPER_ADMIN
+
+  @@schema("users")
 }
 
 enum SubscriptionPlan {
   FREE
   PRO
   ENTERPRISE
+
+  @@schema("users")
 }
 
 enum SubscriptionStatus {
   ACTIVE
   CANCELED
   PAST_DUE
+
+  @@schema("users")
 }
 
 enum BookingStatus {
@@ -34,6 +42,8 @@ enum BookingStatus {
   CANCELLED
   COMPLETED
   REFUNDED
+
+  @@schema("bookings")
 }
 
 enum PaymentStatus {
@@ -42,6 +52,8 @@ enum PaymentStatus {
   FAILED
   REFUNDED
   CANCELLED
+
+  @@schema("payments")
 }
 
 // ==================== MULTI-TENANT SCHEMA ====================
@@ -53,15 +65,16 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   users              User[]
-  subscriptions     Subscription[]
-  properties        Property[]
-  bookings          Booking[]
-  payments          Payment[]
-  experiences       Experience[]
+  subscriptions      Subscription[]
+  properties         Property[]
+  bookings           Booking[]
+  payments           Payment[]
+  experiences        Experience[]
   experienceBookings ExperienceBooking[]
   experiencePayments ExperiencePayment[]
 
   @@map("organizations")
+  @@schema("users")
 }
 
 model Subscription {
@@ -77,51 +90,53 @@ model Subscription {
 
   @@index([organizationId])
   @@map("subscriptions")
+  @@schema("users")
 }
 
 // ==================== AUTH SCHEMA ====================
 model User {
-  id             String    @id @default(uuid())
-  email          String    @unique
-  password       String?   // Opcional para usuarios Supabase Auth
-  name           String
-  avatar         String?
-  occupation     String?   // Tagline / profesión del host (ej: "Guías culturales en Gran Colombia Tours")
-  bio            String?  // Biografía del host
+  id                 String        @id @default(uuid())
+  email              String        @unique
+  password           String? // Opcional para usuarios Supabase Auth
+  name               String
+  avatar             String?
+  occupation         String? // Tagline / profesión del host (ej: "Guías culturales en Gran Colombia Tours")
+  bio                String? // Biografía del host
   registrationNumber String? // RNT - Registro Nacional de Turismo (Colombia)
-  role           UserRole  @default(GUEST)
-  authProvider   String    @default("local") // "supabase" | "local"
-  supabaseId     String?   @unique // auth.users.id cuando authProvider=supabase
-  organizationId String?   // Nullable solo para SUPER_ADMIN
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  role               UserRole      @default(GUEST)
+  authProvider       String        @default("local") // "supabase" | "local"
+  supabaseId         String?       @unique // auth.users.id cuando authProvider=supabase
+  organizationId     String? // Nullable solo para SUPER_ADMIN
+  organization       Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
-  properties        Property[]         @relation("HostProperties")
-  bookings          Booking[]          @relation("GuestBookings")
-  reviews              Review[]              @relation("GuestReviews")
-  favorites            Favorite[]
-  experiences          Experience[]          @relation("HostExperiences")
-  experienceBookings   ExperienceBooking[]   @relation("GuestExperienceBookings")
-  experienceReviews    ExperienceReview[]    @relation("GuestExperienceReviews")
+  properties         Property[]          @relation("HostProperties")
+  bookings           Booking[]           @relation("GuestBookings")
+  reviews            Review[]            @relation("GuestReviews")
+  favorites          Favorite[]
+  experiences        Experience[]        @relation("HostExperiences")
+  experienceBookings ExperienceBooking[] @relation("GuestExperienceBookings")
+  experienceReviews  ExperienceReview[]  @relation("GuestExperienceReviews")
 
   @@index([supabaseId])
   @@index([organizationId])
   @@map("users")
+  @@schema("users")
 }
 
 // ==================== PROPERTY SCHEMA ====================
 model Property {
-  id             String   @id @default(uuid())
-  title          String
-  description    String
-  price          Decimal  @db.Decimal(10, 2)
-  currency       String   @default("USD")
-  maxGuests      Int
-  bedrooms       Int
-  bathrooms      Int
-  propertyType   String
-  status         String   @default("DRAFT")
+  id           String  @id @default(uuid())
+  title        String
+  description  String
+  price        Decimal @db.Decimal(10, 2)
+  currency     String  @default("USD")
+  maxGuests    Int
+  bedrooms     Int
+  bathrooms    Int
+  propertyType String
+  status       String  @default("DRAFT")
 
   address   String
   city      String
@@ -150,6 +165,7 @@ model Property {
   @@index([city, country])
   @@index([propertyType])
   @@map("properties")
+  @@schema("listings")
 }
 
 // ==================== BOOKING SCHEMA ====================
@@ -179,6 +195,7 @@ model Booking {
   @@index([propertyId, checkIn, checkOut])
   @@index([checkIn, checkOut])
   @@map("bookings")
+  @@schema("bookings")
 }
 
 // ==================== PAYMENT SCHEMA ====================
@@ -186,7 +203,7 @@ model Payment {
   id                    String        @id @default(uuid())
   bookingId             String        @unique
   organizationId        String
-  organization          Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization          Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   amount                Decimal       @db.Decimal(10, 2)
   currency              String        @default("usd")
   stripePaymentIntentId String?       @unique
@@ -203,6 +220,7 @@ model Payment {
   @@index([bookingId])
   @@index([organizationId])
   @@map("payments")
+  @@schema("payments")
 }
 
 // ==================== REVIEW SCHEMA ====================
@@ -222,6 +240,7 @@ model Review {
   @@index([propertyId])
   @@index([guestId])
   @@map("reviews")
+  @@schema("listings")
 }
 
 // ==================== LOCATIONS SCHEMA ====================
@@ -238,10 +257,11 @@ model Department {
   cities City[]
 
   @@map("departments")
+  @@schema("listings")
 }
 
 model City {
-  id                    String   @id @default(uuid())
+  id                    String     @id @default(uuid())
   name                  String
   slug                  String
   departmentId          String
@@ -249,33 +269,78 @@ model City {
   suggestionDescription String?
   latitude              Float?
   longitude             Float?
-  searchCount           Int      @default(0)
-  displayOrder          Int      @default(0)
-  isActive              Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  searchCount           Int        @default(0)
+  displayOrder          Int        @default(0)
+  isActive              Boolean    @default(true)
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
 
-  places            Place[]
+  places             Place[]
   locationSearchLogs LocationSearchLog[]
 
   @@unique([slug, departmentId])
   @@index([departmentId])
   @@index([slug])
   @@map("cities")
+  @@schema("listings")
 }
 
 // ==================== OUTBOX EVENTS ====================
 model OutboxEvent {
-  id          String   @id @default(uuid())
-  aggregateId String
-  type        String
-  payload     Json
-  createdAt   DateTime @default(now())
-  processedAt DateTime?
+  id             String    @id @default(uuid())
+  aggregateId    String
+  type           String
+  version        String    @default("v1")
+  payload        Json
+  correlationId  String?
+  attempts       Int       @default(0)
+  nextRetryAt    DateTime?
+  lastError      String?
+  deadLetteredAt DateTime?
+  createdAt      DateTime  @default(now())
+  processedAt    DateTime?
 
   @@index([aggregateId])
   @@index([type])
+  @@index([processedAt, nextRetryAt])
+  @@index([deadLetteredAt])
   @@map("outbox_events")
+  @@schema("bookings")
+}
+
+model OutboxDeadLetter {
+  id            String   @id @default(uuid())
+  outboxEventId String
+  aggregateId   String
+  type          String
+  version       String
+  payload       Json
+  errorMessage  String
+  failedAt      DateTime @default(now())
+
+  @@index([outboxEventId])
+  @@index([failedAt])
+  @@map("outbox_dead_letter")
+  @@schema("bookings")
+}
+
+model IdempotencyRecord {
+  id             String   @id @default(uuid())
+  scopeKey       String   @unique
+  method         String
+  path           String
+  idempotencyKey String
+  payloadHash    String
+  responseCode   Int?
+  responseBody   Json?
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([expiresAt])
+  @@index([method, path])
+  @@map("idempotency_records")
+  @@schema("payments")
 }
 
 model Place {
@@ -292,6 +357,7 @@ model Place {
 
   @@index([cityId])
   @@map("places")
+  @@schema("listings")
 }
 
 model LocationSearchLog {
@@ -302,19 +368,20 @@ model LocationSearchLog {
 
   @@index([cityId])
   @@map("location_search_logs")
+  @@schema("listings")
 }
 
 // ==================== EXPERIENCE SCHEMA ====================
 model Experience {
-  id             String   @id @default(uuid())
-  title          String
-  description    String
+  id                  String  @id @default(uuid())
+  title               String
+  description         String
   pricePerParticipant Decimal @db.Decimal(10, 2)
-  currency       String   @default("USD")
-  maxParticipants Int
-  duration       Int      // Duración en minutos
-  category       String   // "tour", "workshop", "tasting", "adventure", etc.
-  status         String   @default("DRAFT")
+  currency            String  @default("USD")
+  maxParticipants     Int
+  duration            Int // Duración en minutos
+  category            String // "tour", "workshop", "tasting", "adventure", etc.
+  status              String  @default("DRAFT")
 
   address   String
   city      String
@@ -328,19 +395,19 @@ model Experience {
   host           User         @relation("HostExperiences", fields: [hostId], references: [id], onDelete: Cascade)
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
-  includes       String   // JSON array: ["Guía local", "Entradas", "Transporte"]
-  excludes       String?  // JSON array: ["Comida", "Propinas"]
-  images         String   // JSON array de URLs
-  meetingPoint   String?  // Punto de encuentro
-  languages      String?  // JSON array: ["es", "en"]
-  ageRestriction String?  // "18+", "All ages", etc.
+
+  includes       String // JSON array: ["Guía local", "Entradas", "Transporte"]
+  excludes       String? // JSON array: ["Comida", "Propinas"]
+  images         String // JSON array de URLs
+  meetingPoint   String? // Punto de encuentro
+  languages      String? // JSON array: ["es", "en"]
+  ageRestriction String? // "18+", "All ages", etc.
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  bookings      ExperienceBooking[]
-  reviews       ExperienceReview[]
+  bookings       ExperienceBooking[]
+  reviews        ExperienceReview[]
   availableSlots ExperienceSlot[]
 
   @@index([hostId])
@@ -349,43 +416,45 @@ model Experience {
   @@index([category])
   @@index([status])
   @@map("experiences")
+  @@schema("listings")
 }
 
 model ExperienceSlot {
-  id           String   @id @default(uuid())
+  id           String     @id @default(uuid())
   experienceId String
   experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
-  
-  date         DateTime  // Fecha específica
-  startTime    String    // Hora de inicio (ej: "09:00", "21:00")
-  endTime      String?   // Hora de fin (opcional)
-  availableSpots Int     // Espacios disponibles
-  isRecurring  Boolean   @default(false) // Si se repite semanalmente
-  dayOfWeek    Int?      // 0=Domingo, 1=Lunes... (solo si isRecurring)
-  
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+
+  date           DateTime // Fecha específica
+  startTime      String // Hora de inicio (ej: "09:00", "21:00")
+  endTime        String? // Hora de fin (opcional)
+  availableSpots Int // Espacios disponibles
+  isRecurring    Boolean  @default(false) // Si se repite semanalmente
+  dayOfWeek      Int? // 0=Domingo, 1=Lunes... (solo si isRecurring)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([experienceId])
   @@index([date])
   @@index([dayOfWeek])
   @@map("experience_slots")
+  @@schema("listings")
 }
 
 model ExperienceBooking {
-  id             String        @id @default(uuid())
+  id             String       @id @default(uuid())
   experienceId   String
-  experience     Experience    @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  experience     Experience   @relation(fields: [experienceId], references: [id], onDelete: Cascade)
   guestId        String
-  guest          User          @relation("GuestExperienceBookings", fields: [guestId], references: [id], onDelete: Cascade)
+  guest          User         @relation("GuestExperienceBookings", fields: [guestId], references: [id], onDelete: Cascade)
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
-  date           DateTime      // Fecha y hora de la experiencia
-  participants   Int           // Número de participantes
-  totalPrice     Decimal       @db.Decimal(10, 2)
-  status         BookingStatus @default(PENDING)
-  
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  date         DateTime // Fecha y hora de la experiencia
+  participants Int // Número de participantes
+  totalPrice   Decimal       @db.Decimal(10, 2)
+  status       BookingStatus @default(PENDING)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -398,13 +467,14 @@ model ExperienceBooking {
   @@index([status])
   @@index([date])
   @@map("experience_bookings")
+  @@schema("bookings")
 }
 
 model ExperiencePayment {
   id                    String        @id @default(uuid())
   bookingId             String        @unique
   organizationId        String
-  organization          Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization          Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   amount                Decimal       @db.Decimal(10, 2)
   currency              String        @default("usd")
   stripePaymentIntentId String?       @unique
@@ -421,24 +491,26 @@ model ExperiencePayment {
   @@index([bookingId])
   @@index([organizationId])
   @@map("experience_payments")
+  @@schema("payments")
 }
 
 model ExperienceReview {
-  id           String   @id @default(uuid())
-  bookingId    String   @unique
+  id           String            @id @default(uuid())
+  bookingId    String            @unique
   booking      ExperienceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   experienceId String
-  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  experience   Experience        @relation(fields: [experienceId], references: [id], onDelete: Cascade)
   guestId      String
-  guest        User     @relation("GuestExperienceReviews", fields: [guestId], references: [id], onDelete: Cascade)
+  guest        User              @relation("GuestExperienceReviews", fields: [guestId], references: [id], onDelete: Cascade)
   rating       Int
   comment      String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   @@index([experienceId])
   @@index([guestId])
   @@map("experience_reviews")
+  @@schema("listings")
 }
 
 // ==================== FAVORITE SCHEMA ====================
@@ -453,4 +525,5 @@ model Favorite {
   @@unique([userId, propertyId])
   @@index([userId])
   @@map("favorites")
+  @@schema("listings")
 }
