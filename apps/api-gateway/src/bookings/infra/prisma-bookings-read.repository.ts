@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common'
-import { PrismaService } from '../../common/prisma.service'
-import { IBookingsReadRepository } from '../domain/booking.domain'
+import { Injectable } from '@nestjs/common';
+import { PrismaBookingsClient } from '../../contexts/bookings/infrastructure/prisma-bookings.client';
+import { IBookingsReadRepository } from '../domain/booking.domain';
 
 /**
  * Implementación basada en Prisma de las lecturas de reservas.
@@ -8,9 +8,12 @@ import { IBookingsReadRepository } from '../domain/booking.domain'
  */
 @Injectable()
 export class PrismaBookingsReadRepository implements IBookingsReadRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaBookingsClient) {}
 
-  async findAllByGuest(guestId: string, organizationId: string): Promise<any[]> {
+  async findAllByGuest(
+    guestId: string,
+    organizationId: string,
+  ): Promise<any[]> {
     return this.prisma.booking.findMany({
       where: { guestId, organizationId },
       include: {
@@ -26,14 +29,17 @@ export class PrismaBookingsReadRepository implements IBookingsReadRepository {
         review: { select: { id: true } },
       },
       orderBy: { createdAt: 'desc' },
-    })
+    });
   }
 
-  async findAllByHost(hostId: string, organizationId?: string | null): Promise<any[]> {
+  async findAllByHost(
+    hostId: string,
+    organizationId?: string | null,
+  ): Promise<any[]> {
     const where: { property: { hostId: string; organizationId?: string } } = {
       property: { hostId },
-    }
-    if (organizationId) where.property.organizationId = organizationId
+    };
+    if (organizationId) where.property.organizationId = organizationId;
 
     return this.prisma.booking.findMany({
       where,
@@ -57,7 +63,6 @@ export class PrismaBookingsReadRepository implements IBookingsReadRepository {
         },
       },
       orderBy: { createdAt: 'desc' },
-    })
+    });
   }
 }
-

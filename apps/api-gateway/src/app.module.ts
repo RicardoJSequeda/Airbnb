@@ -1,17 +1,17 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { AuthModule } from './auth/auth.module';
-import { PropertiesModule } from './properties/properties.module';
-import { ExperiencesModule } from './experiences/experiences.module';
-import { BookingsModule } from './bookings/bookings.module';
-import { PaymentsModule } from './payments/payments.module';
-import { ReviewsModule } from './reviews/reviews.module';
-import { FavoritesModule } from './favorites/favorites.module';
-import { LocationsModule } from './locations/locations.module';
+import { DistributedRateLimitGuard } from './common/guards/distributed-rate-limit.guard';
 import { RedisModule } from './common/redis.module';
 import { HealthModule } from './health/health.module';
+import { BookingsContextModule } from './contexts/bookings/bookings-context.module';
+import { PaymentsContextModule } from './contexts/payments/payments-context.module';
+import { UsersContextModule } from './contexts/users/users-context.module';
+import { ListingsContextModule } from './contexts/listings/listings-context.module';
+import { PlatformModule } from './platform/platform.module';
+import { CorrelationIdInterceptor } from './platform/observability/correlation-id.interceptor';
+import { IdempotencyInterceptor } from './platform/idempotency/idempotency.interceptor';
 
 @Module({
   imports: [
@@ -21,25 +21,34 @@ import { HealthModule } from './health/health.module';
     }),
     ThrottlerModule.forRoot([
       {
-        ttl: 60000, // 1 minuto
-        limit: 100, // 100 requests por minuto
+        ttl: 60000,
+        limit: 100,
       },
     ]),
     RedisModule,
     HealthModule,
-    AuthModule,
-    PropertiesModule,
-    ExperiencesModule,
-    BookingsModule,
-    PaymentsModule,
-    ReviewsModule,
-    FavoritesModule,
-    LocationsModule,
+    PlatformModule,
+    UsersContextModule,
+    ListingsContextModule,
+    BookingsContextModule,
+    PaymentsContextModule,
   ],
   providers: [
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: DistributedRateLimitGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: CorrelationIdInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: IdempotencyInterceptor,
     },
   ],
 })

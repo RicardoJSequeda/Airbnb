@@ -4,9 +4,11 @@
  */
 
 export interface DomainEvent {
+  eventId?: string;
   aggregateId: string;
   type: string;
+  version?: 'v1';
   occurredAt: Date;
-  payload: any;
+  correlationId?: string;
+  payload: Record<string, unknown>;
 }
-

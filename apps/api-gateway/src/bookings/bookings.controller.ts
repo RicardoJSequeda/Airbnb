@@ -16,6 +16,7 @@ import { SubscriptionGuard } from '../common/guards/subscription.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/prisma-enums';
+import { RequireIdempotency } from '../common/decorators/idempotency.decorator';
 
 @Controller('bookings')
 @UseGuards(SupabaseAuthGuard, OrganizationGuard, SubscriptionGuard)
@@ -23,6 +24,7 @@ export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Post()
+  @RequireIdempotency()
   create(@Body() createBookingDto: CreateBookingDto, @Request() req) {
     return this.bookingsService.create(
       createBookingDto,
@@ -59,6 +61,7 @@ export class BookingsController {
   }
 
   @Patch(':id/cancel')
+  @RequireIdempotency()
   cancel(@Param('id') id: string, @Request() req) {
     return this.bookingsService.cancel(
       id,
@@ -68,6 +71,7 @@ export class BookingsController {
   }
 
   @Patch(':id/confirm')
+  @RequireIdempotency()
   confirm(@Param('id') id: string, @Request() req) {
     return this.bookingsService.confirm(
       id,
@@ -77,6 +81,7 @@ export class BookingsController {
   }
 
   @Patch(':id/reject')
+  @RequireIdempotency()
   reject(@Param('id') id: string, @Request() req) {
     return this.bookingsService.reject(
       id,
