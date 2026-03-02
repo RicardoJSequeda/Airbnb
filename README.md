@@ -38,6 +38,12 @@ Motor de marketplace (alojamientos y experiencias) multi-tenant, con API públic
 | Contenedores | Docker / Docker Compose |
 | Despliegue | Vercel (frontend), Railway (backend), Supabase (PostgreSQL) |
 
+### Calidad y validación
+
+- Lint: `pnpm lint`
+- Tests backend: `pnpm --filter api-gateway test`
+- Build completa: `pnpm build`
+
 ---
 
 ## Arquitectura
