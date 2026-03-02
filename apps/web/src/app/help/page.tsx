@@ -1,18 +1,40 @@
-import Header from '@/components/layout/header'
-import Footer from '@/components/layout/footer'
-import Link from 'next/link'
+import InfoPageLayout from "@/components/support/InfoPageLayout";
+import SectionCard from "@/components/support/SectionCard";
 
 export default function HelpPage() {
   return (
-    <main className="min-h-screen bg-white">
-      <Header />
-      <div className="h-20" />
-      <div className="max-w-[720px] mx-auto px-6 py-16">
-        <h1 className="text-3xl font-semibold text-secondary mb-4">Centro de ayuda</h1>
-        <p className="text-secondary mb-6">Contenido en preparacion.</p>
-        <Link href="/" className="text-primary font-medium hover:underline">Volver al inicio</Link>
+    <InfoPageLayout
+      eyebrow="Soporte"
+      title="Centro de ayuda"
+      description="Resuelve dudas sobre reservas, pagos, cancelaciones y seguridad. Diseñamos esta experiencia para que encuentres respuestas rápidas, con el estilo claro y directo de Airbnb."
+    >
+      <div className="grid gap-6 md:grid-cols-2">
+        <SectionCard
+          title="Reservas"
+          items={[
+            "Cómo reservar un alojamiento o experiencia de forma segura.",
+            "Qué hacer si el anfitrión no responde a tiempo.",
+            "Cómo modificar fechas y número de huéspedes.",
+          ]}
+        />
+        <SectionCard
+          title="Pagos y reembolsos"
+          items={[
+            "Métodos de pago admitidos y validaciones del sistema.",
+            "Tiempos de procesamiento de reembolsos por banco/país.",
+            "Recibos, comprobantes y seguimiento del estado de pago.",
+          ]}
+        />
       </div>
-      <Footer />
-    </main>
-  )
+
+      <SectionCard
+        title="Contacto y respuesta prioritaria"
+        items={[
+          "Soporte 24/7 para incidentes de viaje activos.",
+          "Canales de atención para cuentas, seguridad y disputas.",
+          "Escalamiento interno cuando existe riesgo para huéspedes o anfitriones.",
+        ]}
+      />
+    </InfoPageLayout>
+  );
 }
