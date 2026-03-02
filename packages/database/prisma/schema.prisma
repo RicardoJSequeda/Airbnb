@@ -444,7 +444,6 @@ model LocationSearchLog {
   @@schema("listings")
 }
 
-// ==================== EXPERIENCE SCHEMA ====================
 model Experience {
   id                  String  @id @default(uuid())
   title               String
@@ -588,7 +587,7 @@ model ExperienceReview {
   @@schema("listings")
 }
 
-// ==================== FAVORITE SCHEMA ====================
+
 model Favorite {
   id         String   @id @default(uuid())
   userId     String
