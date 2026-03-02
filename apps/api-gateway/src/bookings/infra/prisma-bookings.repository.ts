@@ -4,6 +4,7 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaBookingsClient } from '../../contexts/bookings/infrastructure/prisma-bookings.client';
 import type {
   IBookingsRepository,
@@ -161,7 +162,7 @@ export class PrismaBookingsRepository implements IBookingsRepository {
 
         const outboxEvents = events ?? [];
         if (outboxEvents.length > 0) {
-          const anyTx = tx as any;
+          const anyTx = tx;
           if (anyTx.outboxEvent?.createMany) {
             await anyTx.outboxEvent.createMany({
               data: outboxEvents.map((e: DomainEvent) => ({
@@ -169,7 +170,7 @@ export class PrismaBookingsRepository implements IBookingsRepository {
                 type: e.type,
                 version: e.version ?? 'v1',
                 correlationId: e.correlationId ?? null,
-                payload: e.payload,
+                payload: e.payload as Prisma.InputJsonValue,
               })),
             });
           }
@@ -251,7 +252,7 @@ export class PrismaBookingsRepository implements IBookingsRepository {
 
       const outboxEvents = events ?? [];
       if (outboxEvents.length > 0) {
-        const anyTx = tx as any;
+        const anyTx = tx;
         if (anyTx.outboxEvent?.createMany) {
           await anyTx.outboxEvent.createMany({
             data: outboxEvents.map((e: DomainEvent) => ({
@@ -259,7 +260,7 @@ export class PrismaBookingsRepository implements IBookingsRepository {
               type: e.type,
               version: e.version ?? 'v1',
               correlationId: e.correlationId ?? null,
-              payload: e.payload,
+              payload: e.payload as Prisma.InputJsonValue,
             })),
           });
         }

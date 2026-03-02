@@ -107,7 +107,7 @@ export class PropertiesService {
             name: true,
             avatar: true,
           },
-        }),
+        },
       }),
     });
 
@@ -341,7 +341,7 @@ export class PropertiesService {
               },
             },
           },
-        },
+        }),
       });
 
       if (!property) {
