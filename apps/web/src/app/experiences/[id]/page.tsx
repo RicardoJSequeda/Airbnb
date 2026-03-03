@@ -7,17 +7,17 @@ import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import {
   ExperienceHostCard,
-  ExperienceWhatYouWillDo,
   ExperienceReviewsSection,
   ExperienceWhereWeMeet,
   ExperienceHostAboutSection,
   ExperienceLocation,
   ExperienceStickySummary,
+  ExperienceKnowSection,
   ExperienceCancellationPolicy,
   ExperienceQualityVerified,
   ExperienceReportListing,
+  ExperiencePortfolio,
   SelectTimeModal,
-  type ExperienceStep,
   type ExperienceSlot,
 } from '@/components/experience-detail'
 import type { Experience } from '@/types/experience'
@@ -52,22 +52,6 @@ function buildMockSlots(durationMinutes: number, count: number): ExperienceSlot[
     }
   }
   return slots
-}
-
-function buildSteps(experience: Experience): ExperienceStep[] {
-  const includes = experience.includes ?? []
-  if (includes.length > 0) {
-    return includes.map((text, i) => ({
-      title: text,
-      description: experience.description?.slice(0, 120) + (experience.description && experience.description.length > 120 ? '...' : '') || 'Parte de esta experiencia.',
-    }))
-  }
-  return [
-    {
-      title: experience.title,
-      description: experience.description?.slice(0, 200) || 'Descubre esta experiencia con el anfitrión.',
-    },
-  ]
 }
 
 export default function ExperienceDetailPage() {
@@ -124,8 +108,6 @@ export default function ExperienceDetailPage() {
   const reviews = experience.reviews ?? []
   const rating = experience.averageRating ?? 0
   const totalReviews = experience.totalReviews ?? 0
-  const steps = buildSteps(experience)
-  const firstImage = images[0]
   const slots = buildMockSlots(experience.duration ?? 480, 6)
   const originalPrice = experience.pricePerParticipant != null && experience.pricePerParticipant > 0
     ? Math.round(experience.pricePerParticipant * 1.1)
@@ -135,8 +117,8 @@ export default function ExperienceDetailPage() {
     <main className="min-h-screen bg-white">
       <Header />
 
-      {/* Sin overflow aquí: overflow-x-hidden rompe position:sticky. La columna derecha tiene min-height + padding-bottom para que al llegar al final del contenido la izquierda no se "levante". */}
-      <div className="max-w-[1120px] mx-auto px-6 md:px-10 lg:px-12 pt-[7.5rem] pb-24 scroll-smooth">
+      {/* relative z-0 crea contexto de apilamiento para que el contenido (incl. mapa Leaflet) no pase por encima del header (z-50) al hacer scroll */}
+      <div className="relative z-0 max-w-[1120px] mx-auto px-6 md:px-10 lg:px-12 pt-[7.5rem] pb-24 scroll-smooth">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,42%)_minmax(0,58%)] gap-12 items-start">
           {/* COLUMNA IZQUIERDA (STICKY): se mantiene fija mientras la derecha hace scroll; el padding-bottom de la derecha evita que se suelte al final */}
           <aside className="min-w-0 lg:sticky lg:top-28 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-hidden">
@@ -182,7 +164,7 @@ export default function ExperienceDetailPage() {
               />
             </div>
 
-            <ExperienceWhatYouWillDo steps={steps} fallbackImage={firstImage} />
+            <ExperiencePortfolio images={images} title={experience.title} />
 
             <ExperienceReviewsSection
               averageRating={rating}
@@ -198,6 +180,8 @@ export default function ExperienceDetailPage() {
               latitude={experience.latitude}
               longitude={experience.longitude}
             />
+
+            <ExperienceKnowSection />
 
             {experience.host && (
               <ExperienceHostAboutSection
@@ -233,7 +217,12 @@ export default function ExperienceDetailPage() {
           imageUrl={images[0]}
           onSelectSlot={(slot, adults, children) => {
             setSelectTimeModalOpen(false)
-            const q = new URLSearchParams({ slot: slot.id, adults: String(adults), children: String(children) })
+            const q = new URLSearchParams({
+              slot: slot.id,
+              adults: String(adults),
+              children: String(children),
+              ...(slot.date && { date: slot.date }),
+            })
             router.push(`/experiences/${experience.id}/book?${q.toString()}`)
           }}
         />

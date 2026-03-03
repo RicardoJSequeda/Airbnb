@@ -18,6 +18,18 @@ export const bookingsApi = {
     return response.data
   },
 
+  /** Reserva de experiencia: mismo formato de respuesta que create (booking + clientSecret + paymentIntentId). Requiere endpoint POST /bookings/experience en el backend. */
+  createExperienceBooking: async (data: {
+    experienceId: string
+    slotId: string
+    date: string
+    adults: number
+    children?: number
+  }) => {
+    const response = await apiClient.post<CreateBookingResponse>('/bookings/experience', data)
+    return response.data
+  },
+
   getMyBookings: async () => {
     const response = await apiClient.get<Booking[]>('/bookings/my-bookings')
     return response.data

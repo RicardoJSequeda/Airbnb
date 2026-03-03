@@ -141,12 +141,18 @@ export default function SelectTimeModal({
   }, [])
 
   const selectedDateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null
+  /** Horario seleccionado (ej. "10:00 a.m."); al dar Siguiente se confirma y se navega */
+  const [selectedTimeLabel, setSelectedTimeLabel] = useState<string | null>(null)
 
   const handleTimeSlotClick = (timeLabel: string) => {
-    if (!selectedDate || !selectedDateStr) return
+    setSelectedTimeLabel(timeLabel)
+  }
+
+  const handleSiguiente = () => {
+    if (!selectedDate || !selectedDateStr || !selectedTimeLabel) return
     const slot = buildSyntheticSlot(
       selectedDate,
-      timeLabel,
+      selectedTimeLabel,
       durationMinutes,
       selectedDateStr
     )
@@ -340,16 +346,23 @@ export default function SelectTimeModal({
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {selectedDateStr ? (
-                    FIXED_TIME_LABELS.map((label) => (
-                      <button
-                        key={label}
-                        type="button"
-                        onClick={() => handleTimeSlotClick(label)}
-                        className="px-2.5 py-1 rounded border border-neutral-300 bg-white text-[11px] font-medium text-[#222222] hover:border-[#222222] hover:bg-neutral-50 transition-colors"
-                      >
-                        {label}
-                      </button>
-                    ))
+                    FIXED_TIME_LABELS.map((label) => {
+                      const isSelected = selectedTimeLabel === label
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => handleTimeSlotClick(label)}
+                          className={`px-2.5 py-1 rounded border text-[11px] font-medium transition-colors ${
+                            isSelected
+                              ? 'border-[#222222] bg-[#222222] text-white'
+                              : 'border-neutral-300 bg-white text-[#222222] hover:border-[#222222] hover:bg-neutral-50'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })
                   ) : (
                     <p className="text-[11px] text-neutral-500">
                       Selecciona una fecha para ver horarios
@@ -384,16 +397,23 @@ export default function SelectTimeModal({
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {selectedDateStr ? (
-                    FIXED_TIME_LABELS.map((label) => (
-                      <button
-                        key={`private-${label}`}
-                        type="button"
-                        onClick={() => handleTimeSlotClick(label)}
-                        className="px-2.5 py-1 rounded border border-neutral-300 bg-white text-[11px] font-medium text-[#222222] hover:border-[#222222] hover:bg-neutral-50 transition-colors"
-                      >
-                        {label}
-                      </button>
-                    ))
+                    FIXED_TIME_LABELS.map((label) => {
+                      const isSelected = selectedTimeLabel === label
+                      return (
+                        <button
+                          key={`private-${label}`}
+                          type="button"
+                          onClick={() => handleTimeSlotClick(label)}
+                          className={`px-2.5 py-1 rounded border text-[11px] font-medium transition-colors ${
+                            isSelected
+                              ? 'border-[#222222] bg-[#222222] text-white'
+                              : 'border-neutral-300 bg-white text-[#222222] hover:border-[#222222] hover:bg-neutral-50'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })
                   ) : (
                     <p className="text-[11px] text-neutral-500">
                       Selecciona una fecha para ver horarios
@@ -401,6 +421,23 @@ export default function SelectTimeModal({
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Barra inferior: mínimo para reservar + Siguiente (va a la pasarela de pago vía página de reserva) */}
+            <div className="flex-shrink-0 border-t border-neutral-200 px-3 py-3 flex items-center justify-between gap-4 bg-white">
+              <p className="text-[11px] text-[#222222]">
+                <span className="font-semibold">{formatPrice(minGroup, currency)}</span>
+                {' '}
+                como mínimo para reservar
+              </p>
+              <button
+                type="button"
+                disabled={!selectedDateStr || !selectedTimeLabel}
+                onClick={handleSiguiente}
+                className="px-4 py-2 rounded-lg bg-[#222222] text-white text-xs font-semibold hover:bg-[#333333] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Siguiente
+              </button>
             </div>
           </div>
         </motion.div>

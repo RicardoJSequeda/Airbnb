@@ -8,10 +8,13 @@ import { ChevronLeft, CreditCard } from 'lucide-react'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import { publicExperiencesApi } from '@/lib/api/experiences'
+import { bookingsApi } from '@/lib/api/bookings'
 import { parseErrorMessage } from '@/lib/utils/parse-error'
 import type { Experience } from '@/types/experience'
 import { format, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
+
+const CHECKOUT_DATA_KEY = 'checkout_booking_data'
 
 const TIME_SLOTS_DAY = [
   { start: 10, startMin: 0, end: 12, endMin: 15 },
@@ -49,9 +52,10 @@ function ExperienceBookContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const id = params.id as string
-  const slotId = searchParams.get('slot')
+  const slotId = searchParams.get('slot') ?? ''
   const adults = Math.max(1, parseInt(searchParams.get('adults') ?? '1', 10))
   const children = parseInt(searchParams.get('children') ?? '0', 10)
+  const dateParam = searchParams.get('date')
 
   const [experience, setExperience] = useState<Experience | null>(null)
   const [loading, setLoading] = useState(true)
@@ -60,6 +64,8 @@ function ExperienceBookContent() {
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'pse'>('card')
   const [cardFormOpen, setCardFormOpen] = useState(false)
   const [pseFormOpen, setPseFormOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -124,6 +130,40 @@ function ExperienceBookContent() {
 
   const displayDate = selectedSlot?.displayDate ?? selectedSlot?.dateLabel ?? '—'
   const timeDisplay = selectedSlot?.timeRangeCompact ?? selectedSlot?.timeRange ?? '—'
+
+  const handleConfirmaYPaga = async () => {
+    setPayError(null)
+    setSubmitting(true)
+    try {
+      const date = dateParam ?? (selectedSlot ? format(addDays(new Date(), 1), 'yyyy-MM-dd') : '')
+      const result = await bookingsApi.createExperienceBooking({
+        experienceId: id,
+        slotId: (slotId || selectedSlot?.id) ?? '',
+        date,
+        adults,
+        children,
+      })
+      const bookingId = (result as { booking?: { id: string }; bookingId?: string }).booking?.id ?? (result as { bookingId?: string }).bookingId
+      if (!bookingId || !result.clientSecret || !result.paymentIntentId) {
+        setPayError('Respuesta incompleta del servidor')
+        setSubmitting(false)
+        return
+      }
+      sessionStorage.setItem(
+        CHECKOUT_DATA_KEY,
+        JSON.stringify({
+          bookingId,
+          clientSecret: result.clientSecret,
+          paymentIntentId: result.paymentIntentId,
+        })
+      )
+      router.push('/checkout')
+    } catch (err) {
+      setPayError(parseErrorMessage(err, 'No se pudo crear la reserva. Prueba más tarde.'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <main className="min-h-screen bg-white">
@@ -302,7 +342,12 @@ function ExperienceBookContent() {
               </div>
             </div>
 
-            {/* Texto legal + botón Confirma y paga */}
+            {/* Texto legal + botón Confirma y paga → pasarela de pago reutilizable (/checkout) */}
+            {payError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm mb-4">
+                {payError}
+              </div>
+            )}
             <p className="text-[12px] text-[#717171] leading-relaxed">
               Al seleccionar el botón, acepto los{' '}
               <a href="#" className="text-[#006AFF] underline hover:text-[#0052CC]">términos de la reservación</a>
@@ -313,9 +358,11 @@ function ExperienceBookContent() {
             </p>
             <button
               type="button"
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-[#E61E4D] via-[#E31C5F] to-[#D70466] text-white text-[16px] font-semibold hover:opacity-95 active:scale-[0.99] transition-transform"
+              disabled={submitting}
+              onClick={handleConfirmaYPaga}
+              className="w-full py-4 rounded-xl bg-gradient-to-r from-[#E61E4D] via-[#E31C5F] to-[#D70466] text-white text-[16px] font-semibold hover:opacity-95 active:scale-[0.99] transition-transform disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Confirma y paga
+              {submitting ? 'Procesando...' : 'Confirma y paga'}
             </button>
           </div>
 

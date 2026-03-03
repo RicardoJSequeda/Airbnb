@@ -1,13 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import {
-  Map,
-  MapMarker,
-  MarkerContent,
-  MarkerLabel,
-  MapControls,
-} from '@/components/ui/map'
+import ExperienceMap from './ExperienceMap'
 
 interface ExperienceWhereWeMeetProps {
   meetingPoint?: string
@@ -43,22 +37,7 @@ export default function ExperienceWhereWeMeet({
       </p>
       <div className="w-full rounded-xl overflow-hidden border border-[#EBEBEB] bg-neutral-100 shadow-sm">
         <div className="relative aspect-[4/3] min-h-[280px] w-full">
-          <Map
-            center={[longitude, latitude]}
-            zoom={15}
-            className="rounded-xl"
-          >
-            <MapMarker longitude={longitude} latitude={latitude}>
-              <MarkerContent>
-                <MarkerLabel position="bottom">Punto de encuentro</MarkerLabel>
-              </MarkerContent>
-            </MapMarker>
-            <MapControls
-              position="top-right"
-              showZoom
-              showFullscreen
-            />
-          </Map>
+          <ExperienceMap latitude={latitude} longitude={longitude} />
         </div>
         <div className="flex items-center justify-between gap-2 px-3 py-2 bg-white border-t border-[#EBEBEB]">
           <span className="text-sm font-medium text-[#222222]">Punto de encuentro</span>
