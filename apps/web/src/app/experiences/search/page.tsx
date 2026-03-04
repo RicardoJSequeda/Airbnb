@@ -138,6 +138,61 @@ function ExperiencesSearchContent() {
   const displayCategoryName = serviceCategory?.name ?? 'este servicio'
   const cityLabel = city || 'tu zona'
 
+  // VISTA EXPERIENCIAS (módulo experiencias): layout tipo carruseles por secciones
+  if (!fromServices) {
+    const hasExperiences = experiences.length > 0
+    const mainList = experiences
+    const secondaryList = experiences.length > 4 ? experiences.slice().reverse() : experiences
+
+    return (
+      <main className="min-h-screen bg-white">
+        <Header />
+        {/* Un poco más de espacio entre el header y el título de experiencias */}
+        <div className="h-24" />
+
+        <div className={`${CONTAINER_CLASS} pb-16`}>
+          <header className="mb-6">
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-[#222222]">
+              {city ? `Experiencias en ${city}` : 'Experiencias recomendadas'}
+            </h1>
+            <p className="mt-1 text-sm md:text-base text-[#717171]">
+              Basadas en actividades populares realizadas por huéspedes en la zona.
+            </p>
+          </header>
+
+          {hasExperiences ? (
+            <div className="space-y-10">
+              <ExperiencesList
+                experiences={mainList}
+                title="Cultura e historia de la zona"
+              />
+
+              {secondaryList.length > 0 && (
+                <ExperiencesList
+                  experiences={secondaryList}
+                  title="Los mejores sabores locales"
+                  showArrow
+                />
+              )}
+            </div>
+          ) : (
+            <div className="py-12">
+              <div className="text-center py-16">
+                <p className="text-lg text-secondary">No se encontraron experiencias</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Intenta ajustar tus filtros de búsqueda
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <Footer />
+      </main>
+    )
+  }
+
+  // VISTA SERVICIOS (fromServices=true): reutiliza layout actual de servicios
   return (
     <main className="min-h-screen">
       <Header />

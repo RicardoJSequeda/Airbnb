@@ -23,12 +23,18 @@ export default function ServiceCategoryList({
   city,
 }: ServiceCategoryListProps) {
   const router = useRouter()
-  const pathname = usePathname()
+  const pathname = usePathname() || ''
 
-  const isServicesContext = pathname?.startsWith('/services')
+  const isServicesContext = pathname.startsWith('/services')
+  const isSearchView = pathname.includes('/search')
+  // En vistas de búsqueda (/services/search, /experiences/search) usamos menos espacio vertical.
+  // En la landing de servicios (/services) mantenemos más espacio bajo el header.
+  const sectionPaddingTopClass = isSearchView
+    ? 'pt-[1cm]'
+    : 'pt-[calc(1.5rem+3cm)]'
 
   return (
-    <section className="mx-auto w-full max-w-[1600px] px-6 pt-6 pb-8">
+    <section className={`mx-auto w-full max-w-[1600px] px-6 ${sectionPaddingTopClass} pb-8`}>
       <h2 className="mb-4 text-[22px] md:text-[26px] font-medium tracking-tight text-[#222222]">
         {title}
       </h2>

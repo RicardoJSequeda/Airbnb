@@ -179,7 +179,8 @@ export default function SelectTimeModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50"
+        // z muy alto para quedar siempre por encima del mapa Leaflet y otros overlays
+        className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/50"
         onClick={onClose}
       >
         <motion.div
@@ -450,7 +451,7 @@ export default function SelectTimeModal({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="fixed inset-0 z-[210] flex items-start justify-center pt-[12vh] pb-4 px-4"
+              className="fixed inset-0 z-[1210] flex items-start justify-center pt-[12vh] pb-4 px-4"
               onClick={() => setShowAllMonths(false)}
             >
               <motion.div

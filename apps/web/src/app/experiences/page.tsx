@@ -1,16 +1,45 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import ExperiencesList from '@/components/experiences/experiences-list'
 import { useExperiencesList } from '@/features/experiences/hooks'
 
+const CITIES_PER_BATCH = 4
+const MAX_EXPERIENCES_PER_CITY = 12
+const MAX_ORIGINALS = 16
+
 export default function ExperiencesPage() {
+  // Cargamos todas las experiencias del módulo experiencias (sin filtrar por ciudad).
   const { experiences, loading, error } = useExperiencesList({
-    city: 'Bogotá',
-    country: 'Colombia',
     listingType: 'experience',
   })
+
+  const [visibleBatches, setVisibleBatches] = useState(1)
+
+  const { cityGroups, originals } = useMemo(() => {
+    const byCity = new Map<string, typeof experiences>()
+
+    for (const exp of experiences) {
+      const city = (exp.city || 'Otros').trim()
+      if (!byCity.has(city)) byCity.set(city, [])
+      byCity.get(city)!.push(exp)
+    }
+
+    const sortedCities = Array.from(byCity.entries()).sort(
+      (a, b) => b[1].length - a[1].length,
+    )
+
+    const originalsSorted = [...experiences].sort(
+      (a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0),
+    )
+
+    return {
+      cityGroups: sortedCities,
+      originals: originalsSorted,
+    }
+  }, [experiences])
 
   if (loading) {
     return (
@@ -48,6 +77,11 @@ export default function ExperiencesPage() {
     )
   }
 
+  const visibleCityGroups = cityGroups.slice(0, visibleBatches * CITIES_PER_BATCH)
+  const hasMoreCities = visibleCityGroups.length < cityGroups.length
+
+  const originalsSlice = originals.slice(0, MAX_ORIGINALS)
+
   return (
     <main className="min-h-screen bg-white">
       <Header />
@@ -56,16 +90,35 @@ export default function ExperiencesPage() {
 
       {experiences.length > 0 ? (
         <div className="w-full space-y-10 py-8">
-          <ExperiencesList
-            experiences={experiences}
-            title="Experiencias populares en Bogotá"
-          />
-          <ExperiencesList
-            experiences={[...experiences].reverse()}
-            title="Airbnb Originals"
-            subtitle="Organizadas por las personas más interesantes del mundo"
-            showArrow
-          />
+          {visibleCityGroups.map(([city, exps]) => (
+            <ExperiencesList
+              key={city}
+              experiences={exps.slice(0, MAX_EXPERIENCES_PER_CITY)}
+              title={`Experiencias en ${city}`}
+              showArrow
+            />
+          ))}
+
+          {originalsSlice.length > 0 && (
+            <ExperiencesList
+              experiences={originalsSlice}
+              title="Airbnb Originals"
+              subtitle="Organizadas por las personas más interesantes del mundo"
+              showArrow
+            />
+          )}
+
+          {hasMoreCities && (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => setVisibleBatches((n) => n + 1)}
+                className="px-5 py-2.5 rounded-full border border-gray-300 text-sm font-medium text-[#222222] hover:bg-gray-50 transition-colors"
+              >
+                Ver más ciudades
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="max-w-[1824px] mx-auto px-6 md:px-10 lg:px-12 py-12">
