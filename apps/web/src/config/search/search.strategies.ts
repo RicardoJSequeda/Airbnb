@@ -66,8 +66,8 @@ export const searchStrategies: Record<SearchVariant, SearchVariantStrategy> = {
 }
 
 export function getVariantFromPathname(pathname: string): SearchVariant {
-  if (pathname.startsWith('/experiences')) return 'experience'
   if (pathname.startsWith('/services')) return 'services'
+  if (pathname.startsWith('/experiences')) return 'experience'
   return 'accommodation'
 }
 

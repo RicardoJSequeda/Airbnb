@@ -98,7 +98,7 @@ export const searchRoutingStrategies: Record<SearchVariant, SearchRoutingStrateg
       return servicesParams(state)
     },
     buildSearchUrl(state) {
-      return `/services?${this.buildSearchParams(state).toString()}`
+      return `/services/search?${this.buildSearchParams(state).toString()}`
     },
   },
 }

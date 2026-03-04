@@ -8,9 +8,12 @@ import type { Experience } from "@/types/experience";
 
 interface ExperienceCardProps {
   experience: Experience;
+  hrefQuery?: string;
+  /** Si true, navegar a la ruta de servicios en lugar de experiencias */
+  useServicesRoute?: boolean;
 }
 
-const ExperienceCard = ({ experience }: ExperienceCardProps) => {
+const ExperienceCard = ({ experience, hrefQuery, useServicesRoute = false }: ExperienceCardProps) => {
   const [isLiked, setIsLiked] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -28,8 +31,14 @@ const ExperienceCard = ({ experience }: ExperienceCardProps) => {
     return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
   };
 
+  const basePath = useServicesRoute ? '/services' : '/experiences';
+  const href =
+    hrefQuery && hrefQuery.length > 0
+      ? `${basePath}/${experience.id}?${hrefQuery}`
+      : `${basePath}/${experience.id}`;
+
   return (
-    <Link href={`/experiences/${experience.id}`}>
+    <Link href={href}>
       <article className="w-full cursor-pointer group block">
         {/* Imagen: ~65% de la tarjeta (4/3); texto ~35% con jerarquía clara */}
         <div

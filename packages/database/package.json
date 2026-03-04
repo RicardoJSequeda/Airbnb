@@ -9,6 +9,8 @@
     "generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:backfill:experiences": "tsx prisma/backfill-experience-relations.ts",
+    "db:backfill:properties": "tsx prisma/backfill-property-relations.ts",
     "studio": "prisma studio"
   },
   "dependencies": {

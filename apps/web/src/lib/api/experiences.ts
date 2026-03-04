@@ -8,6 +8,7 @@ export const publicExperiencesApi = {
     country?: string
     category?: string
     minParticipants?: number
+    listingType?: 'service' | 'experience'
   }) => {
     const response = await apiClient.get<Experience[]>('/public/experiences', { params })
     return response.data

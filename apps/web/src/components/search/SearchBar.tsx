@@ -412,90 +412,97 @@ export function SearchBar({ variant, initialSection = null, onClose }: SearchBar
           </button>
         </motion.div>
 
-        {activeSection && (
-          <div
-            className="hidden md:flex absolute top-full left-0 right-0 mt-2 z-50 min-h-[320px]"
-            style={{ justifyContent: panelJustify }}
-          >
+        <AnimatePresence>
+          {activeSection && (
             <motion.div
-              layout
-              transition={panelLayoutSpring}
-              className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
-              style={{ width: panelWidth }}
+              key="desktop-panel"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={panelContentTransition}
+              className="hidden md:flex absolute top-full left-0 right-0 mt-2 z-50 min-h-[320px]"
+              style={{ justifyContent: panelJustify }}
             >
-              <AnimatePresence mode="wait" initial={false}>
-                {activeSection === 'destination' && (
-                  <motion.div key="destination" transition={panelContentTransition}>
-                    <LocationInput
-                      placeholder={comp.locationPlaceholder}
-                      value={destination ?? null}
-                      query={locationQuery}
-                      onQueryChange={setLocationQuery}
-                      onSelect={handleDestinationSelect}
-                      onNearby={handleNearby}
-                      onNeighborhoodSelect={handleNeighborhoodSelect}
-                      suggestions={suggestions}
-                      loading={loading}
-                      geoError={state.geoError}
-                      showNeighborhoods={state.showNeighborhoods}
-                      placesData={state.placesData}
-                    />
-                  </motion.div>
-                )}
-                {activeSection === 'dates' && comp.showDates && (
-                  <DateInput
-                    key="dates"
-                    dateMode={comp.dateMode!}
-                    dateRange={strategy.getDateRange(state.form) ?? undefined}
-                    experienceDate={strategy.getExperienceDate(state.form) ?? undefined}
-                    onDateRangeChange={(r) =>
-                      dispatch({ type: 'FORM_UPDATE', update: { field: 'dateRange', value: r } })
-                    }
-                    onExperienceDateChange={(e) =>
-                      dispatch({
-                        type: 'FORM_UPDATE',
-                        update: { field: 'experienceDate', value: e ?? null },
-                      })
-                    }
-                    onClose={closePanel}
-                    dateAndTimeConfig={comp.dateAndTime}
-                    referenceDate={new Date()}
-                  />
-                )}
-                {activeSection === 'guests' && comp.showGuests && (
-                  variant === 'services' ? (
-                    <ServiceTypeInput
-                      value={selectedServiceType}
-                      onChange={(next) =>
+              <motion.div
+                layout
+                transition={panelLayoutSpring}
+                className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
+                style={{ width: panelWidth }}
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  {activeSection === 'destination' && (
+                    <motion.div key="destination" transition={panelContentTransition}>
+                      <LocationInput
+                        placeholder={comp.locationPlaceholder}
+                        value={destination ?? null}
+                        query={locationQuery}
+                        onQueryChange={setLocationQuery}
+                        onSelect={handleDestinationSelect}
+                        onNearby={handleNearby}
+                        onNeighborhoodSelect={handleNeighborhoodSelect}
+                        suggestions={suggestions}
+                        loading={loading}
+                        geoError={state.geoError}
+                        showNeighborhoods={state.showNeighborhoods}
+                        placesData={state.placesData}
+                      />
+                    </motion.div>
+                  )}
+                  {activeSection === 'dates' && comp.showDates && (
+                    <DateInput
+                      key="dates"
+                      dateMode={comp.dateMode!}
+                      dateRange={strategy.getDateRange(state.form) ?? undefined}
+                      experienceDate={strategy.getExperienceDate(state.form) ?? undefined}
+                      onDateRangeChange={(r) =>
+                        dispatch({ type: 'FORM_UPDATE', update: { field: 'dateRange', value: r } })
+                      }
+                      onExperienceDateChange={(e) =>
                         dispatch({
                           type: 'FORM_UPDATE',
-                          update: { field: 'serviceType', value: next },
-                        })
-                      }
-                    />
-                  ) : (
-                    <GuestsInput
-                      key="guests"
-                      guestsMode={comp.guestsMode!}
-                      guests={strategy.getGuests(state.form)}
-                      participants={strategy.getParticipants(state.form)}
-                      onGuestsChange={(g) =>
-                        dispatch({ type: 'FORM_UPDATE', update: { field: 'guests', value: g } })
-                      }
-                      onParticipantsChange={(p) =>
-                        dispatch({
-                          type: 'FORM_UPDATE',
-                          update: { field: 'participants', value: p },
+                          update: { field: 'experienceDate', value: e ?? null },
                         })
                       }
                       onClose={closePanel}
+                      dateAndTimeConfig={comp.dateAndTime}
+                      referenceDate={new Date()}
                     />
-                  )
-                )}
-              </AnimatePresence>
+                  )}
+                  {activeSection === 'guests' && comp.showGuests && (
+                    variant === 'services' ? (
+                      <ServiceTypeInput
+                        value={selectedServiceType}
+                        onChange={(next) =>
+                          dispatch({
+                            type: 'FORM_UPDATE',
+                            update: { field: 'serviceType', value: next },
+                          })
+                        }
+                      />
+                    ) : (
+                      <GuestsInput
+                        key="guests"
+                        guestsMode={comp.guestsMode!}
+                        guests={strategy.getGuests(state.form)}
+                        participants={strategy.getParticipants(state.form)}
+                        onGuestsChange={(g) =>
+                          dispatch({ type: 'FORM_UPDATE', update: { field: 'guests', value: g } })
+                        }
+                        onParticipantsChange={(p) =>
+                          dispatch({
+                            type: 'FORM_UPDATE',
+                            update: { field: 'participants', value: p },
+                          })
+                        }
+                        onClose={closePanel}
+                      />
+                    )
+                  )}
+                </AnimatePresence>
+              </motion.div>
             </motion.div>
-          </div>
-        )}
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {activeSection && (
@@ -598,16 +605,23 @@ export function SearchBar({ variant, initialSection = null, onClose }: SearchBar
         </AnimatePresence>
       </div>
 
-      {activeSection && (
-        <div
-          className="hidden md:block fixed inset-0 z-40"
-          onClick={closePanel}
-          onKeyDown={(e) => e.key === 'Escape' && closePanel()}
-          role="button"
-          tabIndex={0}
-          aria-label="Cerrar buscador"
-        />
-      )}
+      <AnimatePresence>
+        {activeSection && (
+          <motion.div
+            key="desktop-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.25 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: [0.22, 0.61, 0.36, 1] }}
+            className="hidden md:block fixed inset-0 z-40 bg-black"
+            onClick={closePanel}
+            onKeyDown={(e) => e.key === 'Escape' && closePanel()}
+            role="button"
+            tabIndex={0}
+            aria-label="Cerrar buscador"
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

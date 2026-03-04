@@ -280,24 +280,34 @@ export class ExperiencesService {
     return this.formatExperience(updated);
   }
 
+  /** Categorías que se consideran "servicios" (solo aparecen en módulo Servicios). El resto son "experiencias". */
+  private static readonly SERVICE_CATEGORIES = ['tasting', 'adventure', 'workshop'];
+
   /** API pública: todas las experiencias PUBLISHED. Nunca expone organizationId. Si la BD falla, devuelve []. */
   async findAllPublic(filters?: {
     city?: string;
     country?: string;
     category?: string;
     minParticipants?: number;
+    listingType?: 'service' | 'experience';
   }) {
     try {
       const where: any = { status: 'PUBLISHED' };
 
       if (filters?.city) where.city = filters.city;
       if (filters?.country) where.country = filters.country;
-      if (filters?.category) where.category = filters.category;
+      if (filters?.category) {
+        where.category = filters.category;
+      } else if (filters?.listingType === 'service') {
+        where.category = { in: ExperiencesService.SERVICE_CATEGORIES };
+      } else if (filters?.listingType === 'experience') {
+        where.category = { notIn: ExperiencesService.SERVICE_CATEGORIES };
+      }
       if (filters?.minParticipants) {
         where.maxParticipants = { gte: filters.minParticipants };
       }
 
-      const cacheKey = `public:experiences:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.category ?? ''}`;
+      const cacheKey = `public:experiences:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.category ?? ''}:${filters?.listingType ?? ''}`;
       if (this.redis.isAvailable()) {
         const cached = await this.redis.get(cacheKey);
         if (cached) {
@@ -440,25 +450,35 @@ export class ExperiencesService {
       ...rest
     } = experience;
 
+    const includesFromRelations =
+      Array.isArray(experienceIncludes) && experienceIncludes.length > 0
+        ? experienceIncludes.map((item: any) => item.itemText)
+        : null;
+
+    const imagesFromRelations =
+      Array.isArray(experienceImages) && experienceImages.length > 0
+        ? experienceImages
+            .slice()
+            .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
+            .map((item: any) => item.imageUrl)
+        : null;
+
+    const languagesFromRelations =
+      Array.isArray(experienceLanguages) && experienceLanguages.length > 0
+        ? experienceLanguages.map((item: any) => item.languageCode)
+        : null;
+
     return {
       ...rest,
       pricePerParticipant:
         pricePerParticipant != null
           ? Number(pricePerParticipant)
           : pricePerParticipant,
-      includes: Array.isArray(experienceIncludes)
-        ? experienceIncludes.map((item: any) => item.itemText)
-        : this.safeJsonParse(includes),
+      // Seed / datos legacy: puede existir JSON en columnas (includes/images/languages) sin filas relacionadas.
+      includes: includesFromRelations ?? this.safeJsonParse(includes),
       excludes: this.safeJsonParse(excludes),
-      images: Array.isArray(experienceImages)
-        ? experienceImages
-            .slice()
-            .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
-            .map((item: any) => item.imageUrl)
-        : this.safeJsonParse(images),
-      languages: Array.isArray(experienceLanguages)
-        ? experienceLanguages.map((item: any) => item.languageCode)
-        : this.safeJsonParse(languages),
+      images: imagesFromRelations ?? this.safeJsonParse(images),
+      languages: languagesFromRelations ?? this.safeJsonParse(languages),
     };
   }
 

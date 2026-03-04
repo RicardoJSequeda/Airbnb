@@ -9,6 +9,7 @@ export default function ExperiencesPage() {
   const { experiences, loading, error } = useExperiencesList({
     city: 'Bogotá',
     country: 'Colombia',
+    listingType: 'experience',
   })
 
   if (loading) {

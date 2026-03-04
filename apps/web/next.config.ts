@@ -17,6 +17,17 @@ const nextConfig: NextConfig = {
         hostname: "a0.muscache.com",
         pathname: "/**",
       },
+      // Dev: imágenes servidas localmente (ej. desde api-gateway o storage local)
+      {
+        protocol: "http",
+        hostname: "localhost",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "127.0.0.1",
+        pathname: "/**",
+      },
     ],
   },
   async rewrites() {

@@ -9,12 +9,17 @@ interface PropertyImageGalleryProps {
   title: string
 }
 
+function validImages(images: string[]): string[] {
+  return (images ?? []).filter((url) => typeof url === 'string' && url.trim() !== '')
+}
+
 export default function PropertyImageGallery({ images, title }: PropertyImageGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [carouselIndex, setCarouselIndex] = useState(0)
 
-  const total = images.length
+  const valid = validImages(images)
+  const total = valid.length
 
   const openLightbox = (index: number) => {
     setLightboxIndex(index)
@@ -75,7 +80,7 @@ export default function PropertyImageGallery({ images, title }: PropertyImageGal
           onClick={() => openLightbox(0)}
         >
           <Image
-            src={images[0]}
+            src={valid[0]}
             alt={`${title} 1`}
             fill
             className="object-cover"
@@ -139,7 +144,7 @@ export default function PropertyImageGallery({ images, title }: PropertyImageGal
             setCarouselIndex(Math.min(idx, total - 1))
           }}
         >
-          {images.map((src, i) => (
+          {valid.map((src, i) => (
             <div
               key={i}
               className="flex-shrink-0 w-full snap-start relative h-full min-w-full"
@@ -189,7 +194,7 @@ export default function PropertyImageGallery({ images, title }: PropertyImageGal
           </button>
           <div className="relative w-full max-w-5xl h-[80vh] mx-4">
             <Image
-              src={images[lightboxIndex]}
+              src={valid[lightboxIndex]}
               alt={`${title} ${lightboxIndex + 1}`}
               fill
               className="object-contain"

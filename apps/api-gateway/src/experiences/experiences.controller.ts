@@ -102,12 +102,14 @@ export class PublicExperiencesController {
     @Query('country') country?: string,
     @Query('category') category?: string,
     @Query('minParticipants') minParticipants?: string,
+    @Query('listingType') listingType?: 'service' | 'experience',
   ) {
     return this.experiencesService.findAllPublic({
       city,
       country,
       category,
       minParticipants: minParticipants ? parseInt(minParticipants, 10) : undefined,
+      listingType,
     });
   }
 

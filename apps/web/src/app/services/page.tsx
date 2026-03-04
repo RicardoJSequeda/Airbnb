@@ -44,6 +44,7 @@ export default function ServicesPage() {
     city,
     category: experienceCategory,
     minParticipants: totalParticipants > 0 ? totalParticipants : undefined,
+    listingType: 'service',
   })
 
   // Agrupar experiencias por categoría de servicio visible
@@ -81,9 +82,8 @@ export default function ServicesPage() {
   return (
     <main className="min-h-screen bg-white">
       <Header />
-      {/* Menos espacio entre el header y el contenido en Servicios */}
-      <div className="h-10" />
-
+      {/* Separador para que el contenido no quede debajo del header fijo */}
+      <div className="h-20" />
       <section className="bg-[#F7F7F7] pb-10">
         {/* Carrusel de categorías como en el diseño oficial */}
         <ServiceCategoryList
@@ -132,6 +132,10 @@ export default function ServicesPage() {
                   key={category.id}
                   experiences={experiences}
                   title={category.name}
+                  fromServicesQuery={`from=services&serviceType=${encodeURIComponent(
+                    SERVICE_TO_EXPERIENCE_CATEGORY[category.id] ?? category.id,
+                  )}&city=${encodeURIComponent(city)}`}
+                  useServicesRoute
                 />
               ))}
           </div>

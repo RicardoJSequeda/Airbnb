@@ -384,18 +384,23 @@ export class PropertiesService {
       ...rest
     } = property;
 
-    return {
-      ...rest,
-      price: price != null ? Number(price) : price,
-      amenities: Array.isArray(propertyAmenities)
+    const amenitiesFromRelations =
+      Array.isArray(propertyAmenities) && propertyAmenities.length > 0
         ? propertyAmenities.map((item: any) => item.amenityName)
-        : this.safeJsonParse(amenities, []),
-      images: Array.isArray(propertyImages)
+        : null;
+    const imagesFromRelations =
+      Array.isArray(propertyImages) && propertyImages.length > 0
         ? propertyImages
             .slice()
             .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
             .map((item: any) => item.imageUrl)
-        : this.safeJsonParse(images, []),
+        : null;
+
+    return {
+      ...rest,
+      price: price != null ? Number(price) : price,
+      amenities: amenitiesFromRelations ?? this.safeJsonParse(amenities, []),
+      images: imagesFromRelations ?? this.safeJsonParse(images, []),
     };
   }
 

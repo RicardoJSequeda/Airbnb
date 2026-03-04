@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import type { ServiceCategory } from './types'
 
 interface ServiceCategoryListProps {
@@ -23,9 +23,12 @@ export default function ServiceCategoryList({
   city,
 }: ServiceCategoryListProps) {
   const router = useRouter()
+  const pathname = usePathname()
+
+  const isServicesContext = pathname?.startsWith('/services')
 
   return (
-    <section className="mx-auto w-full max-w-[1600px] px-6 pt-40 pb-8">
+    <section className="mx-auto w-full max-w-[1600px] px-6 pt-6 pb-8">
       <h2 className="mb-4 text-[22px] md:text-[26px] font-medium tracking-tight text-[#222222]">
         {title}
       </h2>
@@ -45,8 +48,15 @@ export default function ServiceCategoryList({
               const params = new URLSearchParams({
                 category: experienceCategory,
                 city,
+                from: isServicesContext ? 'services' : 'experiences',
+                serviceType: experienceCategory,
               })
-              router.push(`/experiences/search?${params.toString()}`)
+
+              const basePath = isServicesContext
+                ? '/services/search'
+                : '/experiences/search'
+
+              router.push(`${basePath}?${params.toString()}`)
             }}
           >
             <article className="w-full cursor-pointer">

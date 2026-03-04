@@ -7,6 +7,7 @@ import Footer from '@/components/layout/footer'
 import ExperiencesList from '@/components/experiences/experiences-list'
 import { useExperiencesList } from '@/features/experiences/hooks'
 import { serviceCategories } from '@/components/services/data'
+import ServiceCategoryList from '@/components/services/ServiceCategoryList'
 
 const CONTAINER_CLASS =
   'max-w-[1824px] mx-auto px-6 md:px-10 lg:px-12'
@@ -35,12 +36,30 @@ function ExperiencesSearchContent() {
   const children = parseInt(searchParams.get('children') ?? '0', 10)
   const babies = parseInt(searchParams.get('babies') ?? '0', 10)
   const totalParticipants = adults + children + babies
-
-  const { experiences, loading, error } = useExperiencesList({
+  const fromParam = searchParams.get('from')
+  const serviceTypeParam = searchParams.get('serviceType')
+  const fromServices = fromParam === 'services' || !!serviceTypeParam
+  const fullQuery = searchParams.toString()
+  const baseFilters = {
     city: city || undefined,
-    category: category || undefined,
     minParticipants: totalParticipants > 0 ? totalParticipants : undefined,
+    listingType: (fromServices ? 'service' : 'experience') as 'service' | 'experience',
+  }
+
+  // Resultados filtrados según la búsqueda actual (categoría, ciudad, fechas, etc.)
+  const {
+    experiences,
+    loading,
+    error,
+  } = useExperiencesList({
+    ...baseFilters,
+    category: category || undefined,
   })
+
+  // Experiencias solo por ciudad/participantes para calcular la disponibilidad por categoría (carrusel superior)
+  const {
+    experiences: experiencesForCategories = [],
+  } = useExperiencesList(baseFilters)
 
   const getSearchTitle = () => {
     const serviceCategory = category ? getServiceCategoryByExperienceCategory(category) : null
@@ -55,6 +74,27 @@ function ExperiencesSearchContent() {
     if (city) return `Experiencias en ${city}`
     return 'Experiencias disponibles'
   }
+
+  // Agrupar experiencias por categoría de servicio visible para el carrusel
+  const categoriesWithAvailability = serviceCategories.map((serviceCategory) => {
+    const filtered = experiencesForCategories.filter(
+      (experience) =>
+        EXPERIENCE_TO_SERVICE_CATEGORY[experience.category] === serviceCategory.id,
+    )
+    const count = filtered.length
+    let availability = 'Próximamente'
+
+    if (count === 1) {
+      availability = '1 disponible'
+    } else if (count > 1) {
+      availability = `${count} disponibles`
+    }
+
+    return {
+      ...serviceCategory,
+      availability,
+    }
+  })
 
   if (loading) {
     return (
@@ -96,15 +136,27 @@ function ExperiencesSearchContent() {
     ? getServiceCategoryByExperienceCategory(category)
     : null
   const displayCategoryName = serviceCategory?.name ?? 'este servicio'
-  const cityLabel = city || 'esta zona'
+  const cityLabel = city || 'tu zona'
 
   return (
     <main className="min-h-screen">
       <Header />
       <div className="h-20" />
 
+       {/* Carrusel de categorías de servicios para navegar rápidamente entre tipos de servicio */}
+      <ServiceCategoryList
+        title={city ? `Servicios en ${city}` : 'Servicios disponibles'}
+        categories={categoriesWithAvailability}
+        city={city || 'Bogotá'}
+      />
+
       {experiences.length > 0 ? (
-        <ExperiencesList experiences={experiences} title={getSearchTitle()} />
+        <ExperiencesList
+          experiences={experiences}
+          title={getSearchTitle()}
+          fromServicesQuery={fromServices ? fullQuery : undefined}
+          useServicesRoute={fromServices}
+        />
       ) : category ? (
         <div className={`${CONTAINER_CLASS} py-12`}>
           <div className="grid grid-cols-1 gap-8 rounded-3xl bg-white p-6 md:grid-cols-2 md:p-10 items-center">

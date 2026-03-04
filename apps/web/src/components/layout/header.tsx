@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Globe, Menu, Search, ArrowLeft } from "lucide-react";
 import Logo from "../shared/logo";
 import LoginModal from "../shared/LoginModal";
@@ -26,6 +26,7 @@ const isLogoOnlyPage = (path: string) => /^\/experiences\/[^/]+\/book\/?$/.test(
 
 const Header = () => {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const compactMode = isListingPage(pathname ?? '');
     const { isAuthenticated, user, logout } = useAuthStore();
     const [isScrolled, setIsScrolled] = useState(false);
@@ -38,10 +39,12 @@ const Header = () => {
     const [initialSearchSection, setInitialSearchSection] = useState<'destination' | 'dates' | 'guests' | 'participants' | null>(null);
 
     // Derivar la pestaña activa desde la ruta para que al navegar se refleje
-    const activeTab = pathname?.startsWith('/experiences')
-        ? 'Experiencias'
-        : pathname?.startsWith('/services')
+    const fromServices = searchParams?.get('from') === 'services' || !!searchParams?.get('serviceType');
+
+    const activeTab = pathname?.startsWith('/services') || fromServices
         ? 'Servicios'
+        : pathname?.startsWith('/experiences')
+        ? 'Experiencias'
         : 'Alojamientos';
 
     const navItems = [
@@ -141,22 +144,43 @@ const Header = () => {
                                 }}
                                 className="flex items-center justify-center bg-white border border-gray-300 rounded-full hover:shadow-lg transition-all duration-200 w-full h-full text-left"
                             >
-                                <span className="flex-1 px-4 py-2.5 text-sm text-gray-500 truncate">
-                                    {detectSearchSection(pathname ?? '') === 'experiences' || detectSearchSection(pathname ?? '') === 'services'
+                                {detectSearchSection(pathname ?? '') === 'services' && (
+                                    <video
+                                        src="/videos/consierge.webm"
+                                        autoPlay
+                                        muted
+                                        playsInline
+                                        loop
+                                        className="w-8 h-8 ml-3 mr-1 flex-shrink-0 object-contain"
+                                        aria-hidden
+                                    />
+                                )}
+                                <span
+                                    className={`flex-1 px-2 py-2.5 text-gray-500 truncate min-w-0 ${
+                                        detectSearchSection(pathname ?? '') === 'services' ? 'text-xs' : 'text-sm'
+                                    }`}
+                                >
+                                    {detectSearchSection(pathname ?? '') === 'experiences'
                                         ? 'Dónde'
-                                        : 'En cualquier lugar del mundo'}
+                                        : detectSearchSection(pathname ?? '') === 'services'
+                                            ? 'Cualquier lugar'
+                                            : 'En cualquier lugar del mundo'}
                                 </span>
                                 <div className="h-5 w-px bg-gray-300" />
                                 <span className="flex-1 px-3 py-2.5 text-sm text-gray-500 truncate">
-                                    {detectSearchSection(pathname ?? '') === 'experiences' || detectSearchSection(pathname ?? '') === 'services'
+                                    {detectSearchSection(pathname ?? '') === 'experiences'
                                         ? 'Fechas'
-                                        : 'Cualquier semana'}
+                                        : detectSearchSection(pathname ?? '') === 'services'
+                                            ? 'Cualquier fecha'
+                                            : 'Cualquier semana'}
                                 </span>
                                 <div className="h-5 w-px bg-gray-300" />
                                 <span className="flex-1 px-3 py-2.5 text-sm text-gray-500 truncate">
-                                    {detectSearchSection(pathname ?? '') === 'experiences' || detectSearchSection(pathname ?? '') === 'services'
+                                    {detectSearchSection(pathname ?? '') === 'experiences'
                                         ? '¿Cuántos?'
-                                        : '¿Cuántos?'}
+                                        : detectSearchSection(pathname ?? '') === 'services'
+                                            ? 'Agregar servicio'
+                                            : '¿Cuántos?'}
                                 </span>
                                 <div className="bg-primary text-white p-2 rounded-full mr-1 flex-shrink-0">
                                     <Search className="w-4 h-4" />
@@ -165,7 +189,13 @@ const Header = () => {
                         ) : (
                             <div className="flex items-center justify-center bg-white border border-gray-300 rounded-full hover:shadow-lg transition-all duration-200 w-full h-full">
                                 <video
-                                    src={detectSearchSection(pathname ?? '') === 'experiences' ? '/videos/balloon.webm' : '/videos/house.webm'}
+                                    src={
+                                        detectSearchSection(pathname ?? '') === 'experiences'
+                                            ? '/videos/balloon.webm'
+                                            : detectSearchSection(pathname ?? '') === 'services'
+                                                ? '/videos/consierge.webm'
+                                                : '/videos/house.webm'
+                                    }
                                     autoPlay
                                     muted
                                     playsInline
@@ -179,7 +209,11 @@ const Header = () => {
                                     }}
                                     className="flex-1 px-3 py-2.5 text-sm font-medium hover:bg-gray-50 rounded-full transition-colors cursor-pointer text-left"
                                 >
-                                    {detectSearchSection(pathname ?? '') === 'experiences' ? '¿Dónde?' : 'Cualquier lugar'}
+                                    {detectSearchSection(pathname ?? '') === 'experiences'
+                                        ? '¿Dónde?'
+                                        : detectSearchSection(pathname ?? '') === 'services'
+                                            ? 'Cualquier lugar'
+                                            : 'Cualquier lugar'}
                                 </button>
                                 <div className="h-5 w-px bg-gray-300" />
                                 <button
@@ -189,7 +223,11 @@ const Header = () => {
                                     }}
                                     className="flex-1 px-3 py-2.5 text-sm font-medium hover:bg-gray-50 rounded-full transition-colors cursor-pointer text-left"
                                 >
-                                    {detectSearchSection(pathname ?? '') === 'experiences' ? 'Fechas' : 'Cualquier fecha'}
+                                    {detectSearchSection(pathname ?? '') === 'experiences'
+                                        ? 'Fechas'
+                                        : detectSearchSection(pathname ?? '') === 'services'
+                                            ? 'Cualquier fecha'
+                                            : 'Cualquier fecha'}
                                 </button>
                                 <div className="h-5 w-px bg-gray-300" />
                                 <button
@@ -199,7 +237,11 @@ const Header = () => {
                                     }}
                                     className="flex-1 px-3 py-2.5 text-sm text-gray-500 hover:bg-gray-50 rounded-full transition-colors cursor-pointer text-left"
                                 >
-                                    {detectSearchSection(pathname ?? '') === 'experiences' ? 'Participantes' : 'Añade viajeros'}
+                                    {detectSearchSection(pathname ?? '') === 'experiences'
+                                        ? 'Participantes'
+                                        : detectSearchSection(pathname ?? '') === 'services'
+                                            ? 'Agregar servicio'
+                                            : 'Añade viajeros'}
                                 </button>
                                 <div className="bg-primary text-white p-2 rounded-full mr-1">
                                     <Search className="w-4 h-4" />
@@ -300,7 +342,11 @@ const Header = () => {
                         : 'opacity-0 translate-y-4 pointer-events-none invisible h-0 overflow-hidden'
                 } ${showExpanded ? 'py-4' : ''}`}>
                     <SearchBar
-                        variant={getVariantFromPathname(pathname ?? '')}
+                        variant={
+                            fromServices
+                                ? 'services'
+                                : getVariantFromPathname(pathname ?? '')
+                        }
                         initialSection={
                             initialSearchSection === 'participants'
                                 ? 'guests'

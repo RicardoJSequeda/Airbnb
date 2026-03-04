@@ -10,6 +10,8 @@ interface ExperiencesFilters {
   country?: string
   category?: string
   minParticipants?: number
+  /** 'service' = solo categorías servicio (tasting, adventure, workshop); 'experience' = solo el resto */
+  listingType?: 'service' | 'experience'
 }
 
 interface UseExperiencesListResult {
@@ -27,7 +29,7 @@ export function useExperiencesList(filters: ExperiencesFilters): UseExperiencesL
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const { city, country, category, minParticipants } = filters
+  const { city, country, category, minParticipants, listingType } = filters
 
   useEffect(() => {
     setLoading(true)
@@ -38,11 +40,12 @@ export function useExperiencesList(filters: ExperiencesFilters): UseExperiencesL
         country,
         category,
         minParticipants,
+        listingType,
       })
       .then(setExperiences)
       .catch((err) => setError(parseErrorMessage(err, 'Error al cargar experiencias')))
       .finally(() => setLoading(false))
-  }, [city, country, category, minParticipants])
+  }, [city, country, category, minParticipants, listingType])
 
   return { experiences, loading, error }
 }

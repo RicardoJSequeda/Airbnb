@@ -11,6 +11,10 @@ interface ExperiencesListProps {
   title: string
   subtitle?: string
   showArrow?: boolean
+  /** Contexto opcional para propagar query de servicios a los detalles */
+  fromServicesQuery?: string
+  /** Si true, los detalles se abrirán bajo /services/[id] */
+  useServicesRoute?: boolean
 }
 
 /** Misma estructura que PropertyCarousel: section + fila título/flechas + contenedor scroll, con max-w y padding idénticos. */
@@ -19,6 +23,8 @@ export default function ExperiencesList({
   title,
   subtitle,
   showArrow,
+  fromServicesQuery,
+  useServicesRoute = false,
 }: ExperiencesListProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -122,7 +128,11 @@ export default function ExperiencesList({
                 xl:w-[247px]
               "
             >
-              <ExperienceCard experience={experience} />
+              <ExperienceCard
+                experience={experience}
+                hrefQuery={fromServicesQuery}
+                useServicesRoute={useServicesRoute}
+              />
             </div>
           ))}
         </div>

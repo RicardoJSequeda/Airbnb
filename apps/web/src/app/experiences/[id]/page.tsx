@@ -1,17 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import {
+  ExperienceGallery,
   ExperienceHostCard,
   ExperienceReviewsSection,
   ExperienceWhereWeMeet,
   ExperienceHostAboutSection,
   ExperienceLocation,
   ExperienceStickySummary,
+  ExperienceDetailSidebar,
   ExperienceKnowSection,
   ExperienceCancellationPolicy,
   ExperienceQualityVerified,
@@ -56,11 +58,14 @@ function buildMockSlots(durationMinutes: number, count: number): ExperienceSlot[
 
 export default function ExperienceDetailPage() {
   const params = useParams()
+  const pathname = usePathname()
   const router = useRouter()
   const id = params.id as string
   const { experience, loading, error } = useExperienceDetail(id)
   const [isFavorite, setIsFavorite] = useState(false)
   const [selectTimeModalOpen, setSelectTimeModalOpen] = useState(false)
+  /** Vista de servicio: layout actual (resumen sticky izq, contenido der). Vista de experiencia: layout nuevo (galería + contenido izq, resumen sticky der). */
+  const isServiceDetail = (pathname ?? '').includes('/services/')
 
   if (loading) {
     return (
@@ -117,93 +122,133 @@ export default function ExperienceDetailPage() {
     <main className="min-h-screen bg-white">
       <Header />
 
-      {/* relative z-0 crea contexto de apilamiento para que el contenido (incl. mapa Leaflet) no pase por encima del header (z-50) al hacer scroll */}
       <div className="relative z-0 max-w-[1120px] mx-auto px-6 md:px-10 lg:px-12 pt-[7.5rem] pb-24 scroll-smooth">
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,42%)_minmax(0,58%)] gap-12 items-start">
-          {/* COLUMNA IZQUIERDA (STICKY): se mantiene fija mientras la derecha hace scroll; el padding-bottom de la derecha evita que se suelte al final */}
-          <aside className="min-w-0 lg:sticky lg:top-28 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-hidden">
-            <ExperienceStickySummary
-              experienceId={experience.id}
-              title={experience.title}
-              imageUrl={images[0]}
-              hostName={experience.host?.name}
-              hostAvatar={experience.host?.avatar ?? null}
-              hostOccupation={experience.hostOccupation ?? null}
-              city={experience.city}
-              category={experience.category}
-              meetingPoint={experience.meetingPoint ?? experience.address ?? null}
-              averageRating={rating}
-              totalReviews={totalReviews}
-              isFavorite={isFavorite}
-              onFavoriteToggle={() => setIsFavorite((v) => !v)}
-              pricePerParticipant={experience.pricePerParticipant}
-              currency={experience.currency}
-              originalPrice={originalPrice}
-              slots={slots}
-              onShowDates={() => setSelectTimeModalOpen(true)}
-            />
-          </aside>
-
-          {/* COLUMNA DERECHA: min-height + espaciador final para que la fila del grid sea más alta que el contenido y la sticky izquierda no se alce al llegar al final */}
-          <div className="min-w-0 space-y-12 pb-8 min-h-[calc(100vh-8rem)]">
-            <div className="space-y-4">
+        {isServiceDetail ? (
+          /* ——— LAYOUT SERVICIO: izquierda sticky resumen, derecha contenido (sin cambios) ——— */
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,42%)_minmax(0,58%)] gap-12 items-start">
+            <aside className="min-w-0 lg:sticky lg:top-28 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-hidden">
+              <ExperienceStickySummary
+                experienceId={experience.id}
+                title={experience.title}
+                imageUrl={images[0]}
+                hostName={experience.host?.name}
+                hostAvatar={experience.host?.avatar ?? null}
+                hostOccupation={experience.hostOccupation ?? null}
+                city={experience.city}
+                category={experience.category}
+                meetingPoint={experience.meetingPoint ?? experience.address ?? null}
+                averageRating={rating}
+                totalReviews={totalReviews}
+                isFavorite={isFavorite}
+                onFavoriteToggle={() => setIsFavorite((v) => !v)}
+                pricePerParticipant={experience.pricePerParticipant}
+                currency={experience.currency}
+                originalPrice={originalPrice}
+                slots={slots}
+                onShowDates={() => setSelectTimeModalOpen(true)}
+              />
+            </aside>
+            <div className="min-w-0 space-y-12 pb-8 min-h-[calc(100vh-8rem)]">
+              <div className="space-y-4">
+                {experience.host && (
+                  <ExperienceHostCard
+                    hostId={experience.host.id}
+                    hostName={experience.host.name}
+                    hostAvatar={experience.host.avatar}
+                    hostOccupation={experience.hostOccupation}
+                  />
+                )}
+                <ExperienceLocation
+                  title={experience.title}
+                  address={experience.address || experience.meetingPoint || ''}
+                  city={experience.city}
+                  latitude={experience.latitude}
+                  longitude={experience.longitude}
+                />
+              </div>
+              <ExperiencePortfolio images={images} title={experience.title} />
+              <ExperienceReviewsSection averageRating={rating} totalReviews={totalReviews} reviews={reviews} />
+              <ExperienceWhereWeMeet
+                meetingPoint={experience.meetingPoint}
+                address={experience.address}
+                city={experience.city}
+                country={experience.country}
+                latitude={experience.latitude}
+                longitude={experience.longitude}
+              />
+              <ExperienceKnowSection />
               {experience.host && (
-                <ExperienceHostCard
+                <ExperienceHostAboutSection
                   hostId={experience.host.id}
                   hostName={experience.host.name}
                   hostAvatar={experience.host.avatar}
                   hostOccupation={experience.hostOccupation}
+                  hostBio={experience.hostBio}
+                  registrationNumber={experience.hostRegistrationNumber}
                 />
               )}
-              <ExperienceLocation
-                title={experience.title}
-                address={experience.address || experience.meetingPoint || ''}
+              <ExperienceCancellationPolicy />
+              <ExperienceQualityVerified category={experience.category} />
+              <ExperienceReportListing />
+              <div className="lg:min-h-[150vh]" aria-hidden />
+            </div>
+          </div>
+        ) : (
+          /* ——— LAYOUT EXPERIENCIA: izquierda galería + contenido, derecha sticky resumen ——— */
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,58%)_minmax(0,42%)] gap-10 lg:gap-12 items-start">
+            <div className="min-w-0 space-y-10 pb-8 order-2 lg:order-1">
+              <div className="rounded-2xl overflow-hidden">
+                <ExperienceGallery images={images} title={experience.title} />
+              </div>
+              <ExperienceReviewsSection averageRating={rating} totalReviews={totalReviews} reviews={reviews} />
+              <ExperienceWhereWeMeet
+                meetingPoint={experience.meetingPoint}
+                address={experience.address}
                 city={experience.city}
+                country={experience.country}
                 latitude={experience.latitude}
                 longitude={experience.longitude}
               />
+              <ExperienceKnowSection />
+              {experience.host && (
+                <ExperienceHostAboutSection
+                  hostId={experience.host.id}
+                  hostName={experience.host.name}
+                  hostAvatar={experience.host.avatar}
+                  hostOccupation={experience.hostOccupation}
+                  hostBio={experience.hostBio}
+                  registrationNumber={experience.hostRegistrationNumber}
+                />
+              )}
+              <ExperienceCancellationPolicy />
+              <ExperienceQualityVerified category={experience.category} />
+              <ExperienceReportListing />
             </div>
-
-            <ExperiencePortfolio images={images} title={experience.title} />
-
-            <ExperienceReviewsSection
-              averageRating={rating}
-              totalReviews={totalReviews}
-              reviews={reviews}
-            />
-
-            <ExperienceWhereWeMeet
-              meetingPoint={experience.meetingPoint}
-              address={experience.address}
-              city={experience.city}
-              country={experience.country}
-              latitude={experience.latitude}
-              longitude={experience.longitude}
-            />
-
-            <ExperienceKnowSection />
-
-            {experience.host && (
-              <ExperienceHostAboutSection
-                hostId={experience.host.id}
-                hostName={experience.host.name}
-                hostAvatar={experience.host.avatar}
-                hostOccupation={experience.hostOccupation}
-                hostBio={experience.hostBio}
-                registrationNumber={experience.hostRegistrationNumber}
+            <aside className="min-w-0 lg:sticky lg:top-28 lg:self-start order-1 lg:order-2">
+              <ExperienceDetailSidebar
+                experienceId={experience.id}
+                title={experience.title}
+                description={experience.description}
+                hostName={experience.host?.name}
+                hostAvatar={experience.host?.avatar ?? null}
+                hostOccupation={experience.hostOccupation ?? null}
+                city={experience.city}
+                category={experience.category}
+                meetingPoint={experience.meetingPoint ?? experience.address ?? null}
+                address={experience.address ?? null}
+                averageRating={rating}
+                totalReviews={totalReviews}
+                isFavorite={isFavorite}
+                onFavoriteToggle={() => setIsFavorite((v) => !v)}
+                pricePerParticipant={experience.pricePerParticipant}
+                currency={experience.currency}
+                originalPrice={originalPrice}
+                slots={slots}
+                onShowDates={() => setSelectTimeModalOpen(true)}
               />
-            )}
-
-            <ExperienceCancellationPolicy />
-
-            <ExperienceQualityVerified category={experience.category} />
-
-            <ExperienceReportListing />
-
-            {/* Espaciador: hace que la fila del grid sea más alta que el contenido + viewport, así la columna izquierda sticky no se "alza" al hacer scroll hasta el final */}
-            <div className="lg:min-h-[150vh]" aria-hidden />
+            </aside>
           </div>
-        </div>
+        )}
 
         <SelectTimeModal
           isOpen={selectTimeModalOpen}

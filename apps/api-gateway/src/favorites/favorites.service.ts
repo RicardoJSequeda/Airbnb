@@ -208,7 +208,10 @@ export class FavoritesService {
     images?: string | null;
     propertyImages?: Array<{ imageUrl: string; displayOrder: number }>;
   }) {
-    if (Array.isArray(property.propertyImages)) {
+    if (
+      Array.isArray(property.propertyImages) &&
+      property.propertyImages.length > 0
+    ) {
       return property.propertyImages
         .slice()
         .sort((a, b) => a.displayOrder - b.displayOrder)

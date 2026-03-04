@@ -15,22 +15,24 @@ export default function ExperienceGallery({ images, title }: ExperienceGalleryPr
   const [carouselOpen, setCarouselOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
 
-  const [img0, img1, img2, img3] = images.length >= 4
-    ? [images[0], images[1], images[2], images[3]]
+  const validImages = images.filter((url) => typeof url === 'string' && url.trim() !== '')
+
+  const [img0, img1, img2, img3] = validImages.length >= 4
+    ? [validImages[0], validImages[1], validImages[2], validImages[3]]
     : [
-        images[0] ?? '',
-        images[1] ?? images[0] ?? '',
-        images[2] ?? images[0] ?? '',
-        images[3] ?? images[1] ?? images[0] ?? '',
+        validImages[0] ?? '',
+        validImages[1] ?? validImages[0] ?? '',
+        validImages[2] ?? validImages[0] ?? '',
+        validImages[3] ?? validImages[1] ?? validImages[0] ?? '',
       ]
 
   const handleImageClick = (index: number) => {
     // Asegurar índice válido (por si hay menos de 4 imágenes)
-    setSelectedIndex(Math.min(index, Math.max(0, images.length - 1)))
+    setSelectedIndex(Math.min(index, Math.max(0, validImages.length - 1)))
     setCarouselOpen(true)
   }
 
-  if (images.length === 0) {
+  if (validImages.length === 0) {
     return (
       <div className="aspect-[4/3] rounded-2xl bg-gray-200 flex items-center justify-center text-gray-500">
         Sin imagenes
@@ -104,7 +106,7 @@ export default function ExperienceGallery({ images, title }: ExperienceGalleryPr
         </motion.div>
 
         {/* Botón "Ver todas las fotos" - Mostrar siempre si hay más de 4 imágenes */}
-        {images.length > 4 && (
+        {validImages.length > 4 && (
           <motion.button
             type="button"
             onClick={() => handleImageClick(0)}
@@ -119,7 +121,7 @@ export default function ExperienceGallery({ images, title }: ExperienceGalleryPr
       </div>
 
       <ImageCarouselModal
-        images={images}
+        images={validImages}
         initialIndex={selectedIndex}
         isOpen={carouselOpen}
         onClose={() => setCarouselOpen(false)}
