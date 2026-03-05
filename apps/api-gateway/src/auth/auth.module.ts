@@ -13,7 +13,7 @@ import { PrismaService } from '../common/prisma.service';
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => {
+      useFactory: (configService: ConfigService) => {
         const secret = configService.get<string>('JWT_SECRET');
         if (!secret || secret.trim() === '') {
           throw new Error(

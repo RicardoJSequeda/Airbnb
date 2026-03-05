@@ -52,7 +52,7 @@ export class DiagnosticController {
 
     return {
       ok: true,
-      dbConnected: true,
+      dbConnected,
       totalProperties,
       publishedCount,
       hint:

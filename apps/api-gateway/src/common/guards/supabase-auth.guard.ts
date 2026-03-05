@@ -1,6 +1,6 @@
 import {
-  Injectable,
   ExecutionContext,
+  Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -22,9 +22,15 @@ export class SupabaseAuthGuard extends AuthGuard(['supabase-jwt', 'jwt']) {
     return super.canActivate(context);
   }
 
-  handleRequest(err: any, user: any, info: any) {
+  handleRequest<User = unknown>(
+    err: unknown,
+    user: User | false | null | undefined,
+  ): User {
     if (err || !user) {
-      throw err || new UnauthorizedException('Invalid or expired token');
+      if (err instanceof Error) {
+        throw err;
+      }
+      throw new UnauthorizedException('Invalid or expired token');
     }
     return user;
   }

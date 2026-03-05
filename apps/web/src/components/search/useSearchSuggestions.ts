@@ -43,16 +43,18 @@ export function useSearchSuggestions(
   const [error, setError] = useState<string | null>(null)
 
   const fetchSuggestions = useCallback(() => {
-    setLoading(true)
-    setError(null)
-    strategy
-      .fetchSuggestions(query)
-      .then(setSuggestions)
-      .catch(() => {
-        setError('Error al cargar sugerencias')
-        setSuggestions(fallbackSuggestions)
-      })
-      .finally(() => setLoading(false))
+    Promise.resolve().then(() => {
+      setLoading(true)
+      setError(null)
+      strategy
+        .fetchSuggestions(query)
+        .then(setSuggestions)
+        .catch(() => {
+          setError('Error al cargar sugerencias')
+          setSuggestions(fallbackSuggestions)
+        })
+        .finally(() => setLoading(false))
+    })
   }, [strategy, query])
 
   useEffect(() => {

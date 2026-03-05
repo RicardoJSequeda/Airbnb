@@ -21,8 +21,5 @@ export interface UpdatePaymentStatusData {
 export interface IPaymentsRepository {
   findByBookingId(bookingId: string): Promise<PaymentSnapshot | null>;
 
-  updateStatus(
-    bookingId: string,
-    data: UpdatePaymentStatusData,
-  ): Promise<void>;
+  updateStatus(bookingId: string, data: UpdatePaymentStatusData): Promise<void>;
 }

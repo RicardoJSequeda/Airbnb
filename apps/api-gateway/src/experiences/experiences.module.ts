@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ExperiencesService } from './experiences.service';
-import { ExperiencesController, PublicExperiencesController } from './experiences.controller';
+import {
+  ExperiencesController,
+  PublicExperiencesController,
+} from './experiences.controller';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
 

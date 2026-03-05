@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import Link from 'next/link'
@@ -8,10 +8,6 @@ import { ShareHostModal } from '@/components/shared/ShareHostModal'
 
 export default function HostPage() {
   const [modalOpen, setModalOpen] = useState(true)
-
-  useEffect(() => {
-    setModalOpen(true)
-  }, [])
 
   return (
     <main className="min-h-screen bg-white">

@@ -5,7 +5,17 @@ import { LocationsModule } from '../../locations/locations.module';
 import { ReviewsModule } from '../../reviews/reviews.module';
 
 @Module({
-  imports: [PropertiesModule, ExperiencesModule, LocationsModule, ReviewsModule],
-  exports: [PropertiesModule, ExperiencesModule, LocationsModule, ReviewsModule],
+  imports: [
+    PropertiesModule,
+    ExperiencesModule,
+    LocationsModule,
+    ReviewsModule,
+  ],
+  exports: [
+    PropertiesModule,
+    ExperiencesModule,
+    LocationsModule,
+    ReviewsModule,
+  ],
 })
 export class ListingsContextModule {}

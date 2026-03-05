@@ -26,48 +26,50 @@ export function useCheckoutSession(): CheckoutSessionState {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const raw = sessionStorage.getItem(CHECKOUT_DATA_KEY)
-    if (!raw) {
-      router.push('/')
-      setLoading(false)
-      return
-    }
-
-    if (!env.stripePublishableKey) {
-      setError('Configuración de pago no disponible. Contacta con soporte.')
-      setLoading(false)
-      return
-    }
-
-    try {
-      const data = JSON.parse(raw) as { bookingId?: string; clientSecret?: string; paymentIntentId?: string }
-      if (data.clientSecret) {
-        setClientSecret(data.clientSecret)
+    Promise.resolve().then(() => {
+      const raw = sessionStorage.getItem(CHECKOUT_DATA_KEY)
+      if (!raw) {
+        router.push('/')
         setLoading(false)
-      } else if (data.bookingId) {
-        paymentsApi
-          .createIntent(data.bookingId)
-          .then((r) => {
-            setClientSecret(r.clientSecret)
-            sessionStorage.setItem(
-              CHECKOUT_DATA_KEY,
-              JSON.stringify({
-                ...data,
-                clientSecret: r.clientSecret,
-                paymentIntentId: r.paymentIntentId,
-              }),
-            )
-          })
-          .catch((err) => setError(parseErrorMessage(err, 'Error al cargar el pago')))
-          .finally(() => setLoading(false))
-      } else {
-        setError('Datos de pago incompletos')
+        return
+      }
+
+      if (!env.stripePublishableKey) {
+        setError('Configuración de pago no disponible. Contacta con soporte.')
+        setLoading(false)
+        return
+      }
+
+      try {
+        const data = JSON.parse(raw) as { bookingId?: string; clientSecret?: string; paymentIntentId?: string }
+        if (data.clientSecret) {
+          setClientSecret(data.clientSecret)
+          setLoading(false)
+        } else if (data.bookingId) {
+          paymentsApi
+            .createIntent(data.bookingId)
+            .then((r) => {
+              setClientSecret(r.clientSecret)
+              sessionStorage.setItem(
+                CHECKOUT_DATA_KEY,
+                JSON.stringify({
+                  ...data,
+                  clientSecret: r.clientSecret,
+                  paymentIntentId: r.paymentIntentId,
+                }),
+              )
+            })
+            .catch((err) => setError(parseErrorMessage(err, 'Error al cargar el pago')))
+            .finally(() => setLoading(false))
+        } else {
+          setError('Datos de pago incompletos')
+          setLoading(false)
+        }
+      } catch {
+        setError('Sesión de pago inválida')
         setLoading(false)
       }
-    } catch {
-      setError('Sesión de pago inválida')
-      setLoading(false)
-    }
+    })
   }, [router])
 
   return { clientSecret, loading, error }

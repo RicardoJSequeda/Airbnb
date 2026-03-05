@@ -1,13 +1,14 @@
 import {
-  Injectable,
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole, SubscriptionStatus } from '../prisma-enums';
 import { PrismaService } from '../prisma.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import type { AuthenticatedRequest } from '../types/authenticated-request';
 
 /**
  * Garantiza que la organización del usuario tenga una suscripción ACTIVE.
@@ -32,7 +33,9 @@ export class SubscriptionGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    const { user } = context.switchToHttp().getRequest();
+    const { user } =
+      context.switchToHttp().getRequest<AuthenticatedRequest | undefined>() ??
+      {};
     if (!user) return true;
 
     if (user.role === UserRole.SUPER_ADMIN) return true;

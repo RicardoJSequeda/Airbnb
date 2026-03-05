@@ -102,7 +102,8 @@ export class PaymentsService {
    * Evita race condition entre confirm manual y webhook: updateMany condicional asegura que solo
    * un proceso ejecute la transición; el otro (count=0) devuelve el estado actual sin recalcular.
    */
-  async confirmPayment(confirmPaymentDto: ConfirmPaymentDto, userId: string) {
+  async confirmPayment(confirmPaymentDto: ConfirmPaymentDto, _userId: string) {
+    void _userId;
     const { paymentIntentId, bookingId } = confirmPaymentDto;
 
     const paymentIntent =
@@ -320,20 +321,21 @@ export class PaymentsService {
   }
 
   async handleWebhook(payload: Buffer, signature: string) {
-    const event = await this.stripeService.constructWebhookEvent(
-      payload,
-      signature,
-    );
+    const event = (await Promise.resolve(
+      this.stripeService.constructWebhookEvent(payload, signature),
+    )) as { type: string; data: { object: unknown } };
 
     switch (event.type) {
       case 'payment_intent.succeeded':
-        await this.handlePaymentSuccess(event.data.object);
+        await this.handlePaymentSuccess(event.data.object as { id: string });
         break;
       case 'payment_intent.payment_failed':
-        await this.handlePaymentFailed(event.data.object);
+        await this.handlePaymentFailed(event.data.object as { id: string });
         break;
       case 'charge.refunded':
-        await this.handleRefund(event.data.object);
+        await this.handleRefund(
+          event.data.object as { payment_intent: string },
+        );
         break;
     }
 
@@ -345,7 +347,7 @@ export class PaymentsService {
    * Idempotencia: Stripe puede reenviar webhooks. No recalcular comisión si el pago ya está
    * COMPLETED o si platformFeeAmount ya tiene valor (evita doble procesamiento y race conditions).
    */
-  private async handlePaymentSuccess(paymentIntent: any) {
+  private async handlePaymentSuccess(paymentIntent: { id: string }) {
     const payment = await this.prisma.payment.findFirst({
       where: { stripePaymentIntentId: paymentIntent.id },
     });
@@ -399,7 +401,7 @@ export class PaymentsService {
     await this.redis.del(holdKey(payment.bookingId));
   }
 
-  private async handlePaymentFailed(paymentIntent: any) {
+  private async handlePaymentFailed(paymentIntent: { id: string }) {
     const payment = await this.prisma.payment.findFirst({
       where: { stripePaymentIntentId: paymentIntent.id },
     });
@@ -414,7 +416,7 @@ export class PaymentsService {
     }
   }
 
-  private async handleRefund(charge: any) {
+  private async handleRefund(charge: { payment_intent: string }) {
     const payment = await this.prisma.payment.findFirst({
       where: { stripePaymentIntentId: charge.payment_intent },
     });

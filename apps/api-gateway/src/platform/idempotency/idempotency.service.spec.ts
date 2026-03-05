@@ -1,4 +1,5 @@
 import { IdempotencyService } from './idempotency.service';
+import type { PrismaIdempotencyClient } from './infrastructure/prisma-idempotency.client';
 
 describe('IdempotencyService', () => {
   const model = {
@@ -10,7 +11,7 @@ describe('IdempotencyService', () => {
 
   const prismaMock = {
     idempotencyRecord: model,
-  } as any;
+  } as unknown as PrismaIdempotencyClient;
 
   beforeEach(() => {
     jest.clearAllMocks();

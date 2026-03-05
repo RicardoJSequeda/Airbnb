@@ -23,9 +23,11 @@ function AuthCallbackContent() {
     const redirect = searchParams.get('redirect') || '/'
 
     if (!accessToken) {
-      setStatus('error')
-      setMessage('No se recibió el token de sesión. Redirigiendo…')
-      window.location.href = redirect || '/'
+      Promise.resolve().then(() => {
+        setStatus('error')
+        setMessage('No se recibió el token de sesión. Redirigiendo…')
+        window.location.href = redirect || '/'
+      })
       return
     }
 

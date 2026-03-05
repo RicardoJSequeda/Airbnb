@@ -14,6 +14,16 @@ import { PrismaService } from '../common/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
+type BcryptModule = {
+  hash: (
+    data: string | Buffer,
+    saltOrRounds: string | number,
+  ) => Promise<string>;
+  compare: (data: string | Buffer, encrypted: string) => Promise<boolean>;
+};
+
+const bcryptTyped = bcrypt as BcryptModule;
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -41,7 +51,7 @@ export class AuthService {
       throw new ConflictException('Email already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcryptTyped.hash(password, 10);
 
     const user = await this.prisma.user.create({
       data: {
@@ -84,7 +94,7 @@ export class AuthService {
       throw new UnauthorizedException('Use Google to sign in');
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcryptTyped.compare(password, user.password);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -138,7 +148,11 @@ export class AuthService {
    * sin que el usuario vuelva a pasar por Google.
    */
   async oauthLogin(accessToken: string) {
-    if (!accessToken || typeof accessToken !== 'string' || !accessToken.trim()) {
+    if (
+      !accessToken ||
+      typeof accessToken !== 'string' ||
+      !accessToken.trim()
+    ) {
       throw new UnauthorizedException('Access token is required');
     }
 
@@ -146,13 +160,19 @@ export class AuthService {
       this.configService.get<string>('SUPABASE_JWT_SECRET') ||
       this.configService.get<string>('JWT_SECRET');
     if (!secret || secret.trim() === '') {
-      this.logger.warn('OAuth login attempted but SUPABASE_JWT_SECRET/JWT_SECRET is not set');
+      this.logger.warn(
+        'OAuth login attempted but SUPABASE_JWT_SECRET/JWT_SECRET is not set',
+      );
       throw new UnauthorizedException('OAuth not configured');
     }
 
     try {
-      const supabaseUrl = this.configService.get<string>('SUPABASE_URL')?.trim();
-      const issuer = supabaseUrl ? `${supabaseUrl.replace(/\/$/, '')}/auth/v1` : undefined;
+      const supabaseUrl = this.configService
+        .get<string>('SUPABASE_URL')
+        ?.trim();
+      const issuer = supabaseUrl
+        ? `${supabaseUrl.replace(/\/$/, '')}/auth/v1`
+        : undefined;
       const audience = 'authenticated';
 
       let payload: {
@@ -167,7 +187,7 @@ export class AuthService {
           audience,
           clockTolerance: 10,
         }) as typeof payload;
-      } catch (verifyErr) {
+      } catch {
         if (issuer) {
           try {
             payload = jwt.verify(accessToken.trim(), secret, {
@@ -188,7 +208,9 @@ export class AuthService {
       }
 
       const email =
-        payload.email || payload.user_metadata?.email || `user-${payload.sub}@placeholder.local`;
+        payload.email ||
+        payload.user_metadata?.email ||
+        `user-${payload.sub}@placeholder.local`;
       const name =
         payload.user_metadata?.full_name ||
         payload.user_metadata?.name ||
@@ -207,8 +229,12 @@ export class AuthService {
 
       if (!user) {
         if (!demoOrg) {
-          this.logger.warn('OAuth login: organization "demo" not found. Create it or run seed.');
-          throw new ConflictException('Organization not configured. Please contact support.');
+          this.logger.warn(
+            'OAuth login: organization "demo" not found. Create it or run seed.',
+          );
+          throw new ConflictException(
+            'Organization not configured. Please contact support.',
+          );
         }
         user = await this.prisma.user.create({
           data: {
@@ -243,17 +269,25 @@ export class AuthService {
         token,
       };
     } catch (err) {
-      if (err instanceof UnauthorizedException || err instanceof ConflictException) {
+      if (
+        err instanceof UnauthorizedException ||
+        err instanceof ConflictException
+      ) {
         throw err;
       }
       const prismaErr = err as { code?: string; message?: string };
       if (prismaErr?.code && typeof prismaErr.code === 'string') {
-        this.logger.error(`OAuth login Prisma error: ${prismaErr.code} - ${prismaErr.message}`);
+        this.logger.error(
+          `OAuth login Prisma error: ${prismaErr.code} - ${prismaErr.message}`,
+        );
         throw new ServiceUnavailableException(
           'Database temporarily unavailable. Please try again in a moment.',
         );
       }
-      this.logger.error('OAuth login unexpected error', err instanceof Error ? err.stack : err);
+      this.logger.error(
+        'OAuth login unexpected error',
+        err instanceof Error ? err.stack : err,
+      );
       throw new ServiceUnavailableException(
         'Authentication service temporarily unavailable. Please try again.',
       );

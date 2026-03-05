@@ -24,12 +24,16 @@ export class SupabaseJwtStrategy extends PassportStrategy(
       );
     }
 
+    /* passport-jwt: ExtractJwt/super options not fully inferred by TS; API is typed in @types/passport-jwt */
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+    const jwtFromRequest = ExtractJwt.fromAuthHeaderAsBearerToken();
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest,
       ignoreExpiration: false,
       secretOrKey: secret,
       algorithms: ['HS256'],
     });
+    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
   }
 
   async validate(payload: {

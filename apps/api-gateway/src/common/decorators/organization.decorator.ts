@@ -1,9 +1,9 @@
 import {
+  ExecutionContext,
   SetMetadata,
   createParamDecorator,
-  ExecutionContext,
 } from '@nestjs/common';
-import { UserRole } from '../prisma-enums';
+import type { AuthenticatedRequest } from '../types/authenticated-request';
 
 export const SKIP_ORGANIZATION_CHECK_KEY = 'skipOrganizationCheck';
 
@@ -14,8 +14,10 @@ export const SkipOrganizationCheck = () =>
 /** Extrae organizationId del usuario autenticado (null para SUPER_ADMIN) */
 export const OrganizationId = createParamDecorator(
   (data: unknown, ctx: ExecutionContext): string | null => {
-    const request = ctx.switchToHttp().getRequest();
-    const user = request.user;
+    const request = ctx
+      .switchToHttp()
+      .getRequest<AuthenticatedRequest | undefined>();
+    const user = request?.user;
     return user?.organizationId ?? null;
   },
 );

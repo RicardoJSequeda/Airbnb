@@ -5,6 +5,26 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 
+type PropertyWhere = { id: string; organizationId?: string };
+type FavoriteWhereWithProperty = {
+  userId: string;
+  propertyId: string;
+  property?: { organizationId: string };
+};
+type FavoriteWhereByUser = {
+  userId: string;
+  property?: { organizationId: string };
+};
+type FavoriteWhereByProperty = {
+  propertyId: string;
+  property?: { organizationId: string };
+};
+
+type PropertyWithImages = {
+  images?: string | null;
+  propertyImages?: Array<{ imageUrl: string; displayOrder: number }>;
+};
+
 @Injectable()
 export class FavoritesService {
   constructor(private prisma: PrismaService) {}
@@ -14,7 +34,7 @@ export class FavoritesService {
     userId: string,
     organizationId?: string | null,
   ) {
-    const where: any = { id: propertyId };
+    const where: PropertyWhere = { id: propertyId };
     if (organizationId) where.organizationId = organizationId;
 
     const property = await this.prisma.property.findFirst({ where });
@@ -58,13 +78,16 @@ export class FavoritesService {
       },
     });
 
+    const fav = favorite as {
+      property: PropertyWithImages;
+    } & Record<string, unknown>;
     return {
-      ...favorite,
+      ...fav,
       property: {
-        ...favorite.property,
-        images: this.getPropertyImages(favorite.property),
+        ...fav.property,
+        images: this.getPropertyImages(fav.property),
       },
-    };
+    } as Record<string, unknown>;
   }
 
   async removeFavorite(
@@ -72,7 +95,7 @@ export class FavoritesService {
     userId: string,
     organizationId?: string | null,
   ) {
-    const where: any = { userId, propertyId };
+    const where: FavoriteWhereWithProperty = { userId, propertyId };
     if (organizationId) where.property = { organizationId };
 
     const favorite = await this.prisma.favorite.findFirst({ where });
@@ -92,7 +115,7 @@ export class FavoritesService {
     userId: string,
     organizationId?: string | null,
   ) {
-    const where: any = { id: propertyId };
+    const where: PropertyWhere = { id: propertyId };
     if (organizationId) where.organizationId = organizationId;
 
     const property = await this.prisma.property.findFirst({ where });
@@ -133,7 +156,7 @@ export class FavoritesService {
   }
 
   async getFavorites(userId: string, organizationId?: string | null) {
-    const where: any = { userId };
+    const where: FavoriteWhereByUser = { userId };
     if (organizationId) where.property = { organizationId };
 
     const favorites = await this.prisma.favorite.findMany({
@@ -172,13 +195,18 @@ export class FavoritesService {
       },
     });
 
-    return favorites.map((favorite) => ({
-      ...favorite,
-      property: {
-        ...favorite.property,
-        images: this.getPropertyImages(favorite.property),
-      },
-    }));
+    return favorites.map((favorite) => {
+      const fav = favorite as {
+        property: PropertyWithImages;
+      } & Record<string, unknown>;
+      return {
+        ...fav,
+        property: {
+          ...fav.property,
+          images: this.getPropertyImages(fav.property),
+        },
+      } as Record<string, unknown>;
+    });
   }
 
   async checkIsFavorite(
@@ -186,7 +214,7 @@ export class FavoritesService {
     userId: string,
     organizationId?: string | null,
   ) {
-    const where: any = { userId, propertyId };
+    const where: FavoriteWhereWithProperty = { userId, propertyId };
     if (organizationId) where.property = { organizationId };
 
     const favorite = await this.prisma.favorite.findFirst({ where });
@@ -197,17 +225,14 @@ export class FavoritesService {
   }
 
   async getFavoriteCount(propertyId: string, organizationId?: string | null) {
-    const where: any = { propertyId };
+    const where: FavoriteWhereByProperty = { propertyId };
     if (organizationId) where.property = { organizationId };
 
     const count = await this.prisma.favorite.count({ where });
     return { count };
   }
 
-  private getPropertyImages(property: {
-    images?: string | null;
-    propertyImages?: Array<{ imageUrl: string; displayOrder: number }>;
-  }) {
+  private getPropertyImages(property: PropertyWithImages) {
     if (
       Array.isArray(property.propertyImages) &&
       property.propertyImages.length > 0
@@ -219,7 +244,7 @@ export class FavoritesService {
     }
 
     try {
-      return JSON.parse(property.images || '[]');
+      return JSON.parse(property.images || '[]') as string[];
     } catch {
       return [];
     }

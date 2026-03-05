@@ -27,7 +27,7 @@ export class PublicPropertiesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string): Promise<unknown> {
     return this.propertiesService.findOnePublic(id);
   }
 }

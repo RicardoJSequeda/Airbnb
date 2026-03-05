@@ -162,9 +162,8 @@ export class PrismaBookingsRepository implements IBookingsRepository {
 
         const outboxEvents = events ?? [];
         if (outboxEvents.length > 0) {
-          const anyTx = tx;
-          if (anyTx.outboxEvent?.createMany) {
-            await anyTx.outboxEvent.createMany({
+          if ('outboxEvent' in tx && tx.outboxEvent?.createMany) {
+            await tx.outboxEvent.createMany({
               data: outboxEvents.map((e: DomainEvent) => ({
                 aggregateId: b.id,
                 type: e.type,
@@ -240,9 +239,10 @@ export class PrismaBookingsRepository implements IBookingsRepository {
     events: DomainEvent[],
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
+      /* eslint-disable @typescript-eslint/no-unsafe-assignment -- Prisma transaction tx can be extended client */
       await tx.booking.update({
         where: { id },
-        data: { status: status as any },
+        data: { status: status as Prisma.BookingStatus },
       });
 
       await tx.bookingSummary.updateMany({
@@ -252,9 +252,20 @@ export class PrismaBookingsRepository implements IBookingsRepository {
 
       const outboxEvents = events ?? [];
       if (outboxEvents.length > 0) {
-        const anyTx = tx;
-        if (anyTx.outboxEvent?.createMany) {
-          await anyTx.outboxEvent.createMany({
+        if ('outboxEvent' in tx && tx.outboxEvent?.createMany) {
+          /* eslint-disable-next-line @typescript-eslint/unbound-method -- delegate method invoked with correct context via cast */
+          const createManyFn = tx.outboxEvent.createMany;
+          await (
+            createManyFn as (arg: {
+              data: Array<{
+                aggregateId: string;
+                type: string;
+                version: string;
+                correlationId: string | null;
+                payload: Prisma.InputJsonValue;
+              }>;
+            }) => Promise<unknown>
+          )({
             data: outboxEvents.map((e: DomainEvent) => ({
               aggregateId: id,
               type: e.type,
@@ -265,6 +276,7 @@ export class PrismaBookingsRepository implements IBookingsRepository {
           });
         }
       }
+      /* eslint-enable @typescript-eslint/no-unsafe-assignment */
     });
   }
 
@@ -346,7 +358,19 @@ export class PrismaBookingsRepository implements IBookingsRepository {
     return list.map((b) => this.toSnapshot(b));
   }
 
-  private toSnapshot(b: any): BookingSnapshot {
+  private toSnapshot(b: {
+    id: string;
+    propertyId: string;
+    guestId: string;
+    organizationId: string;
+    checkIn: Date;
+    checkOut: Date;
+    totalPrice: number | Prisma.Decimal;
+    status: string;
+    property?: BookingSnapshot['property'];
+    guest?: BookingSnapshot['guest'];
+    payment?: BookingSnapshot['payment'];
+  }): BookingSnapshot {
     return {
       id: b.id,
       propertyId: b.propertyId,

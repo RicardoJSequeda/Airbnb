@@ -167,13 +167,15 @@ export class ReviewsService {
       },
     });
 
-    return reviews.map((review) => ({
+    type ReviewWithProperty = (typeof reviews)[number];
+    const mapped = reviews.map((review: ReviewWithProperty) => ({
       ...review,
       property: {
         ...review.property,
         images: this.getPropertyImages(review.property),
       },
-    }));
+    })) as unknown[];
+    return mapped;
   }
 
   async findOne(id: string, organizationId?: string | null) {
@@ -220,7 +222,7 @@ export class ReviewsService {
     updateReviewDto: UpdateReviewDto,
     userId: string,
     organizationId?: string | null,
-  ) {
+  ): Promise<unknown> {
     const baseWhere: {
       id: string;
       guestId: string;
@@ -254,10 +256,14 @@ export class ReviewsService {
       },
     });
 
-    return updated;
+    return updated as unknown;
   }
 
-  async remove(id: string, userId: string, organizationId?: string | null) {
+  async remove(
+    id: string,
+    userId: string,
+    organizationId?: string | null,
+  ): Promise<{ message: string }> {
     const baseWhere: {
       id: string;
       guestId: string;
@@ -295,14 +301,16 @@ export class ReviewsService {
     }
 
     try {
-      return JSON.parse(property.images || '[]');
+      return JSON.parse(property.images || '[]') as string[];
     } catch {
       return [];
     }
   }
 
-  private calculateRatingBreakdown(reviews: any[]) {
-    const breakdown = {
+  private calculateRatingBreakdown(
+    reviews: Array<{ rating: number }>,
+  ): Record<number, number> {
+    const breakdown: Record<number, number> = {
       5: 0,
       4: 0,
       3: 0,
@@ -311,7 +319,9 @@ export class ReviewsService {
     };
 
     reviews.forEach((review) => {
-      breakdown[review.rating as keyof typeof breakdown]++;
+      if (review.rating >= 1 && review.rating <= 5) {
+        breakdown[review.rating]++;
+      }
     });
 
     return breakdown;

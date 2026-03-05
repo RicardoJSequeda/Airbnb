@@ -34,7 +34,9 @@ export default function ImageCarouselModal({
   const [currentIndex, setCurrentIndex] = useState(safeInitialIndex)
 
   useEffect(() => {
-    setCurrentIndex(safeInitialIndex)
+    Promise.resolve().then(() => {
+      setCurrentIndex(safeInitialIndex)
+    })
   }, [isOpen, safeInitialIndex])
 
   const handlePrevious = useCallback(() => {

@@ -1,14 +1,47 @@
 import {
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
-  ForbiddenException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
 import { CreateExperienceDto } from './dto/create-experience.dto';
 import { UpdateExperienceDto } from './dto/update-experience.dto';
+
+type ExperienceIncludeRow = { itemText: string };
+type ExperienceImageRow = { imageUrl: string; displayOrder: number };
+type ExperienceLanguageRow = { languageCode: string };
+
+type ExperienceWithRelations = {
+  includes: string | null;
+  excludes: string | null;
+  images: string | null;
+  languages: string | null;
+  pricePerParticipant: number | null;
+  experienceIncludes?: ExperienceIncludeRow[] | null;
+  experienceImages?: ExperienceImageRow[] | null;
+  experienceLanguages?: ExperienceLanguageRow[] | null;
+} & Record<string, unknown>;
+
+type PublicReviewRow = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  guest: { name: string | null; avatar: string | null } | null;
+  createdAt: Date;
+};
+
+type PublicExperienceRow = ExperienceWithRelations & {
+  organizationId?: string | null;
+  host?: {
+    occupation?: string | null;
+    bio?: string | null;
+    registrationNumber?: string | null;
+  } | null;
+  reviews?: PublicReviewRow[] | null;
+};
 
 const EXPERIENCE_LIST_CACHE_TTL = 60;
 
@@ -78,7 +111,7 @@ export class ExperiencesService {
       });
     });
 
-    return this.formatExperience(experience);
+    return this.formatExperience(experience as ExperienceWithRelations);
   }
 
   async findAll(filters?: {
@@ -87,8 +120,8 @@ export class ExperiencesService {
     category?: string;
     organizationId?: string | null;
     minParticipants?: number;
-  }) {
-    const where: any = { status: 'PUBLISHED' };
+  }): Promise<unknown[]> {
+    const where: Record<string, unknown> = { status: 'PUBLISHED' };
     if (filters?.organizationId) where.organizationId = filters.organizationId;
 
     if (filters?.city) where.city = filters.city;
@@ -98,12 +131,14 @@ export class ExperiencesService {
       where.maxParticipants = { gte: filters.minParticipants };
     }
 
-    const cacheKey = `experiences:list:${where.organizationId ?? ''}:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.category ?? ''}`;
+    const orgId =
+      typeof where.organizationId === 'string' ? where.organizationId : '';
+    const cacheKey = `experiences:list:${orgId}:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.category ?? ''}`;
     if (this.redis.isAvailable()) {
       const cached = await this.redis.get(cacheKey);
       if (cached) {
         try {
-          return JSON.parse(cached);
+          return JSON.parse(cached) as unknown[];
         } catch {
           /* invalid cache */
         }
@@ -123,7 +158,9 @@ export class ExperiencesService {
       }),
     });
 
-    const result = experiences.map((e) => this.formatExperience(e));
+    const result = experiences.map((e) =>
+      this.formatExperience(e as ExperienceWithRelations),
+    );
     if (this.redis.isAvailable()) {
       await this.redis.set(
         cacheKey,
@@ -155,7 +192,7 @@ export class ExperiencesService {
       throw new NotFoundException('Experience not found');
     }
 
-    return this.formatExperience(experience);
+    return this.formatExperience(experience as ExperienceWithRelations);
   }
 
   async update(
@@ -163,7 +200,7 @@ export class ExperiencesService {
     updateExperienceDto: UpdateExperienceDto,
     hostId: string,
     organizationId: string,
-  ) {
+  ): Promise<unknown> {
     const experience = await this.prisma.experience.findFirst({
       where: { id, organizationId },
     });
@@ -178,7 +215,7 @@ export class ExperiencesService {
 
     const { includes, excludes, images, languages, ...rest } =
       updateExperienceDto;
-    const updateData: any = { ...rest };
+    const updateData: Record<string, unknown> = { ...rest };
 
     if (includes !== undefined) {
       updateData.includes = JSON.stringify(includes);
@@ -240,7 +277,7 @@ export class ExperiencesService {
       });
     });
 
-    return this.formatExperience(updated);
+    return this.formatExperience(updated as ExperienceWithRelations);
   }
 
   async remove(id: string, hostId: string, organizationId: string) {
@@ -277,11 +314,15 @@ export class ExperiencesService {
       data: { status: 'PUBLISHED' },
     });
 
-    return this.formatExperience(updated);
+    return this.formatExperience(updated as ExperienceWithRelations);
   }
 
   /** Categorías que se consideran "servicios" (solo aparecen en módulo Servicios). El resto son "experiencias". */
-  private static readonly SERVICE_CATEGORIES = ['tasting', 'adventure', 'workshop'];
+  private static readonly SERVICE_CATEGORIES = [
+    'tasting',
+    'adventure',
+    'workshop',
+  ];
 
   /** API pública: todas las experiencias PUBLISHED. Nunca expone organizationId. Si la BD falla, devuelve []. */
   async findAllPublic(filters?: {
@@ -290,9 +331,9 @@ export class ExperiencesService {
     category?: string;
     minParticipants?: number;
     listingType?: 'service' | 'experience';
-  }) {
+  }): Promise<unknown[]> {
     try {
-      const where: any = { status: 'PUBLISHED' };
+      const where: Record<string, unknown> = { status: 'PUBLISHED' };
 
       if (filters?.city) where.city = filters.city;
       if (filters?.country) where.country = filters.country;
@@ -312,7 +353,7 @@ export class ExperiencesService {
         const cached = await this.redis.get(cacheKey);
         if (cached) {
           try {
-            return JSON.parse(cached);
+            return JSON.parse(cached) as unknown[];
           } catch {
             /* invalid cache */
           }
@@ -345,7 +386,9 @@ export class ExperiencesService {
         }),
       });
 
-      const result = experiences.map((e) => this.formatExperienceForPublic(e));
+      const result = experiences.map((e) =>
+        this.formatExperienceForPublic(e as PublicExperienceRow),
+      );
       if (this.redis.isAvailable()) {
         await this.redis.set(
           cacheKey,
@@ -396,7 +439,7 @@ export class ExperiencesService {
         throw new NotFoundException('Experience not found');
       }
 
-      return this.formatExperienceForPublic(experience);
+      return this.formatExperienceForPublic(experience as PublicExperienceRow);
     } catch (err) {
       if (err instanceof NotFoundException) throw err;
       this.logger.warn(
@@ -424,20 +467,20 @@ export class ExperiencesService {
     };
   }
 
-  private safeJsonParse(
-    value: string | null | undefined,
-    fallback: string[] | string = '[]',
-  ): any {
-    if (value == null || value === '')
-      return typeof fallback === 'string' ? [] : fallback;
+  private safeJsonParse<T>(value: string | null | undefined, fallback: T): T {
+    if (value == null || value === '') {
+      return fallback;
+    }
     try {
-      return JSON.parse(value);
+      return JSON.parse(value) as T;
     } catch {
-      return typeof fallback === 'string' ? [] : fallback;
+      return fallback;
     }
   }
 
-  private formatExperience(experience: any) {
+  private formatExperience(
+    experience: ExperienceWithRelations,
+  ): Record<string, unknown> {
     const {
       includes,
       excludes,
@@ -452,20 +495,23 @@ export class ExperiencesService {
 
     const includesFromRelations =
       Array.isArray(experienceIncludes) && experienceIncludes.length > 0
-        ? experienceIncludes.map((item: any) => item.itemText)
+        ? experienceIncludes.map((item) => item.itemText)
         : null;
 
     const imagesFromRelations =
       Array.isArray(experienceImages) && experienceImages.length > 0
         ? experienceImages
             .slice()
-            .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
-            .map((item: any) => item.imageUrl)
+            .sort(
+              (a: ExperienceImageRow, b: ExperienceImageRow) =>
+                a.displayOrder - b.displayOrder,
+            )
+            .map((item) => item.imageUrl)
         : null;
 
     const languagesFromRelations =
       Array.isArray(experienceLanguages) && experienceLanguages.length > 0
-        ? experienceLanguages.map((item: any) => item.languageCode)
+        ? experienceLanguages.map((item) => item.languageCode)
         : null;
 
     return {
@@ -475,24 +521,36 @@ export class ExperiencesService {
           ? Number(pricePerParticipant)
           : pricePerParticipant,
       // Seed / datos legacy: puede existir JSON en columnas (includes/images/languages) sin filas relacionadas.
-      includes: includesFromRelations ?? this.safeJsonParse(includes),
-      excludes: this.safeJsonParse(excludes),
-      images: imagesFromRelations ?? this.safeJsonParse(images),
-      languages: languagesFromRelations ?? this.safeJsonParse(languages),
+      includes:
+        includesFromRelations ??
+        this.safeJsonParse<string[]>(includes, [] as string[]),
+      excludes: this.safeJsonParse<string[]>(excludes, [] as string[]),
+      images:
+        imagesFromRelations ??
+        this.safeJsonParse<string[]>(images, [] as string[]),
+      languages:
+        languagesFromRelations ??
+        this.safeJsonParse<string[]>(languages, [] as string[]),
     };
   }
 
   /** Formato para API pública: omite organizationId, incluye averageRating y totalReviews. */
-  private formatExperienceForPublic(experience: any) {
+  private formatExperienceForPublic(
+    experience: PublicExperienceRow,
+  ): Record<string, unknown> {
     const formatted = this.formatExperience(experience);
-    const { organizationId, ...publicData } = formatted;
+    const { organizationId: _organizationId, ...publicData } = formatted;
+    void _organizationId;
 
     const reviews = experience.reviews ?? [];
     const totalReviews = reviews.length;
     const averageRating =
       totalReviews > 0
         ? Math.round(
-            (reviews.reduce((acc: number, r: any) => acc + r.rating, 0) /
+            (reviews.reduce(
+              (acc: number, r: PublicReviewRow) => acc + r.rating,
+              0,
+            ) /
               totalReviews) *
               10,
           ) / 10
@@ -506,7 +564,7 @@ export class ExperiencesService {
       hostOccupation: host?.occupation ?? undefined,
       hostBio: host?.bio ?? undefined,
       hostRegistrationNumber: host?.registrationNumber ?? undefined,
-      reviews: reviews.map((r: any) => ({
+      reviews: reviews.map((r) => ({
         id: r.id,
         rating: r.rating,
         comment: r.comment,

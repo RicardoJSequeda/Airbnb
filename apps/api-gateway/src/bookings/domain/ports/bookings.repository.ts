@@ -30,7 +30,6 @@ export interface CreateBookingData {
   status: string;
 }
 
-
 export interface BookingSnapshot {
   id: string;
   propertyId: string;
@@ -50,7 +49,11 @@ export interface BookingSnapshot {
     host?: { id: string; name: string; email: string; avatar: string | null };
   };
   guest?: { id: string; name: string; email: string; avatar: string | null };
-  payment?: { id: string; stripePaymentIntentId: string | null; status: string };
+  payment?: {
+    id: string;
+    stripePaymentIntentId: string | null;
+    status: string;
+  };
 }
 
 export interface IBookingsRepository {
@@ -58,7 +61,6 @@ export interface IBookingsRepository {
     propertyId: string,
     organizationId: string,
   ): Promise<PropertySnapshot | null>;
-
   getOverlappingSlots(
     propertyId: string,
     checkIn: Date,
@@ -91,7 +93,11 @@ export interface IBookingsRepository {
     events: DomainEvent[],
   ): Promise<void>;
 
-  setHold(bookingId: string, guestId: string, ttlSeconds: number): Promise<void>;
+  setHold(
+    bookingId: string,
+    guestId: string,
+    ttlSeconds: number,
+  ): Promise<void>;
   deleteHold(bookingId: string): Promise<void>;
 
   findAllByGuest(

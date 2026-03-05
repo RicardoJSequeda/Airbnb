@@ -16,6 +16,7 @@ import { UpdatePropertyDto } from './dto/update-property.dto';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { OrganizationGuard } from '../common/guards/organization.guard';
 import { SubscriptionGuard } from '../common/guards/subscription.guard';
+import type { AuthenticatedRequest } from '../common/types/authenticated-request';
 
 @Controller('dashboard/properties')
 @UseGuards(SupabaseAuthGuard, OrganizationGuard, SubscriptionGuard)
@@ -23,11 +24,14 @@ export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
   @Post()
-  create(@Body() createPropertyDto: CreatePropertyDto, @Request() req) {
+  create(
+    @Body() createPropertyDto: CreatePropertyDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     return this.propertiesService.create(
       createPropertyDto,
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? '',
     );
   }
 
@@ -36,7 +40,7 @@ export class PropertiesController {
     @Query('city') city?: string,
     @Query('country') country?: string,
     @Query('propertyType') propertyType?: string,
-    @Request() req?: { user?: { organizationId?: string | null } },
+    @Request() req?: AuthenticatedRequest,
   ) {
     return this.propertiesService.findAll({
       city,
@@ -47,10 +51,7 @@ export class PropertiesController {
   }
 
   @Get(':id')
-  findOne(
-    @Param('id') id: string,
-    @Request() req: { user?: { organizationId?: string | null } },
-  ) {
+  findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.propertiesService.findOne(id, req.user?.organizationId ?? null);
   }
 
@@ -58,31 +59,31 @@ export class PropertiesController {
   update(
     @Param('id') id: string,
     @Body() updatePropertyDto: UpdatePropertyDto,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.propertiesService.update(
       id,
       updatePropertyDto,
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? undefined,
     );
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string, @Request() req) {
+  remove(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.propertiesService.remove(
       id,
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? undefined,
     );
   }
 
   @Patch(':id/publish')
-  publish(@Param('id') id: string, @Request() req) {
+  publish(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.propertiesService.publish(
       id,
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? undefined,
     );
   }
 }

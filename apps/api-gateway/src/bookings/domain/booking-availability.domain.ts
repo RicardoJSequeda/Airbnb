@@ -38,9 +38,7 @@ export function hasDateConflict(
 ): boolean {
   for (const b of existingBookings) {
     if (NON_BLOCKING_STATUSES.includes(b.status)) continue;
-    if (
-      datesOverlap(requestedStart, requestedEnd, b.startDate, b.endDate)
-    ) {
+    if (datesOverlap(requestedStart, requestedEnd, b.startDate, b.endDate)) {
       return true;
     }
   }

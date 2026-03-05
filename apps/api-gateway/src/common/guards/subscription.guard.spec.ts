@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -113,7 +114,8 @@ describe('SubscriptionGuard', () => {
       );
     } catch (e) {
       expect(e).toBeInstanceOf(ForbiddenException);
-      expect(e.getResponse()).toMatchObject({
+      const response = (e as ForbiddenException).getResponse();
+      expect(response).toMatchObject({
         message: 'Organization has no subscription',
         errorCode: 'SUBSCRIPTION_INACTIVE',
       });
@@ -151,7 +153,8 @@ describe('SubscriptionGuard', () => {
         }),
       );
     } catch (e) {
-      expect(e.getResponse()).toMatchObject({
+      const response = (e as ForbiddenException).getResponse();
+      expect(response).toMatchObject({
         message: 'Subscription is not active',
         errorCode: 'SUBSCRIPTION_INACTIVE',
       });
@@ -189,7 +192,8 @@ describe('SubscriptionGuard', () => {
         }),
       );
     } catch (e) {
-      expect(e.getResponse()).toMatchObject({
+      const response = (e as ForbiddenException).getResponse();
+      expect(response).toMatchObject({
         errorCode: 'SUBSCRIPTION_INACTIVE',
       });
     }

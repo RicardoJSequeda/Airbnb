@@ -48,7 +48,10 @@ export class LocationsController {
     @Query('limit') limit?: string,
   ) {
     if (!query || query.trim().length < 2) return [];
-    return this.locationsService.searchCities(query, limit ? parseInt(limit, 10) : 10);
+    return this.locationsService.searchCities(
+      query,
+      limit ? parseInt(limit, 10) : 10,
+    );
   }
 
   /**

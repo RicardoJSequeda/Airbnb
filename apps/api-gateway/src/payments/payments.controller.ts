@@ -21,6 +21,7 @@ import { OrganizationGuard } from '../common/guards/organization.guard';
 import { SubscriptionGuard } from '../common/guards/subscription.guard';
 import { Public } from '../common/decorators/public.decorator';
 import { RequireIdempotency } from '../common/decorators/idempotency.decorator';
+import type { AuthenticatedRequest } from '../common/types/authenticated-request';
 
 @Controller('payments')
 @UseGuards(SupabaseAuthGuard, OrganizationGuard, SubscriptionGuard)
@@ -31,7 +32,7 @@ export class PaymentsController {
   @RequireIdempotency()
   createPaymentIntent(
     @Body() createPaymentIntentDto: CreatePaymentIntentDto,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.paymentsService.createPaymentIntent(
       createPaymentIntentDto,
@@ -41,7 +42,10 @@ export class PaymentsController {
 
   @Post('confirm')
   @RequireIdempotency()
-  confirmPayment(@Body() confirmPaymentDto: ConfirmPaymentDto, @Request() req) {
+  confirmPayment(
+    @Body() confirmPaymentDto: ConfirmPaymentDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     return this.paymentsService.confirmPayment(
       confirmPaymentDto,
       req.user.userId,
@@ -49,7 +53,10 @@ export class PaymentsController {
   }
 
   @Get('booking/:bookingId')
-  getPaymentByBooking(@Param('bookingId') bookingId: string, @Request() req) {
+  getPaymentByBooking(
+    @Param('bookingId') bookingId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
     return this.paymentsService.getPaymentByBooking(
       bookingId,
       req.user.userId,
@@ -59,7 +66,7 @@ export class PaymentsController {
 
   @Post(':id/refund')
   @RequireIdempotency()
-  refundPayment(@Param('id') id: string, @Request() req) {
+  refundPayment(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.paymentsService.refundPayment(
       id,
       req.user.userId,

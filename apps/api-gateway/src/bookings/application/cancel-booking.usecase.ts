@@ -83,9 +83,7 @@ export class CancelBookingUseCase {
         if (err.code === 'ALREADY_CANCELLED') {
           throw new ApplicationBadRequestError('Booking is already cancelled');
         }
-        throw new ApplicationBadRequestError(
-          'Cannot cancel completed booking',
-        );
+        throw new ApplicationBadRequestError('Cannot cancel completed booking');
       }
       throw err;
     }

@@ -94,20 +94,17 @@ export class Booking {
     }
 
     const nights = calculateNights(params.checkIn, params.checkOut);
-    const totalPrice = calculateBookingTotal(
-      params.pricePerNight,
-      nights,
-    );
+    const totalPrice = calculateBookingTotal(params.pricePerNight, nights);
     const booking = new Booking({
-        propertyId: params.propertyId,
-        guestId: params.guestId,
-        hostId: params.hostId,
-        checkIn: params.checkIn,
-        checkOut: params.checkOut,
-        nights,
-        totalPrice,
-        status: BookingStatus.PENDING,
-      });
+      propertyId: params.propertyId,
+      guestId: params.guestId,
+      hostId: params.hostId,
+      checkIn: params.checkIn,
+      checkOut: params.checkOut,
+      nights,
+      totalPrice,
+      status: BookingStatus.PENDING,
+    });
 
     booking.addDomainEvent({
       aggregateId: '', // se rellenará con el id persistido en el repositorio

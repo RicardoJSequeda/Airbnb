@@ -13,20 +13,20 @@ export function validateBookingDates(
   now: Date = new Date(),
 ): BookingDateValidationError | null {
   if (checkIn < now) {
-    return BookingDateValidationError.CheckInInPast
+    return BookingDateValidationError.CheckInInPast;
   }
 
   if (checkOut <= checkIn) {
-    return BookingDateValidationError.CheckOutBeforeCheckIn
+    return BookingDateValidationError.CheckOutBeforeCheckIn;
   }
 
-  return null
+  return null;
 }
 
 export function calculateNights(checkIn: Date, checkOut: Date): number {
-  const diffMs = checkOut.getTime() - checkIn.getTime()
-  const oneNightMs = 1000 * 60 * 60 * 24
-  return Math.ceil(diffMs / oneNightMs)
+  const diffMs = checkOut.getTime() - checkIn.getTime();
+  const oneNightMs = 1000 * 60 * 60 * 24;
+  return Math.ceil(diffMs / oneNightMs);
 }
 
 /** Estados de reserva (alineado con Prisma BookingStatus). Dominio no importa Prisma. */
@@ -37,24 +37,27 @@ export const BookingStatus = {
   CANCELLED: 'CANCELLED',
   COMPLETED: 'COMPLETED',
   REFUNDED: 'REFUNDED',
-} as const
+} as const;
 
-export type BookingStatusType = (typeof BookingStatus)[keyof typeof BookingStatus]
+export type BookingStatusType =
+  (typeof BookingStatus)[keyof typeof BookingStatus];
 
 /**
  * Reglas de negocio: qué transiciones de estado están permitidas.
  * La autorización (quién puede cancelar/confirmar) sigue en la capa de aplicación.
  */
 export function canCancel(status: string): boolean {
-  return status !== BookingStatus.CANCELLED && status !== BookingStatus.COMPLETED
+  return (
+    status !== BookingStatus.CANCELLED && status !== BookingStatus.COMPLETED
+  );
 }
 
 export function canConfirm(status: string): boolean {
-  return status === BookingStatus.PENDING
+  return status === BookingStatus.PENDING;
 }
 
 export function canReject(status: string): boolean {
-  return status === BookingStatus.PENDING
+  return status === BookingStatus.PENDING;
 }
 
 /**
@@ -62,14 +65,10 @@ export function canReject(status: string): boolean {
  * No acopla el dominio a Prisma; la implementación concreta vive en infraestructura.
  */
 export interface IBookingsReadRepository {
-  findAllByGuest(
-    guestId: string,
-    organizationId: string,
-  ): Promise<any[]>
+  findAllByGuest(guestId: string, organizationId: string): Promise<unknown[]>;
 
   findAllByHost(
     hostId: string,
     organizationId?: string | null,
-  ): Promise<any[]>
+  ): Promise<unknown[]>;
 }
-

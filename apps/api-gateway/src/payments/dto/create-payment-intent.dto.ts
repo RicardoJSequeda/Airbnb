@@ -1,4 +1,4 @@
-import { IsString, IsNumber, Min } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class CreatePaymentIntentDto {
   @IsString()

@@ -21,7 +21,9 @@ export default function CreateFavoriteListModal({
 
   useEffect(() => {
     if (isOpen) {
-      setListName('Experiencias, 2026')
+      Promise.resolve().then(() => {
+        setListName('Experiencias, 2026')
+      })
     }
   }, [isOpen])
 

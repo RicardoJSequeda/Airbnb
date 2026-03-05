@@ -63,7 +63,7 @@ export class BookingsService {
         paymentIntentId: result.paymentIntentId,
       };
     } catch (err) {
-      throw this.mapError(err);
+      this.mapError(err);
     }
   }
 
@@ -79,6 +79,7 @@ export class BookingsService {
   }
 
   async findOne(id: string, userId: string, _organizationId?: string | null) {
+    void _organizationId;
     const booking = await this.getBookingDetailsQuery.execute(id);
     if (!booking) throw new NotFoundException('Booking not found');
 
@@ -101,7 +102,7 @@ export class BookingsService {
         status: result.booking.status,
       };
     } catch (err) {
-      throw this.mapError(err);
+      this.mapError(err);
     }
   }
 
@@ -123,7 +124,7 @@ export class BookingsService {
         paymentBreakdown: result.paymentBreakdown,
       };
     } catch (err) {
-      throw this.mapError(err);
+      this.mapError(err);
     }
   }
 
@@ -139,7 +140,7 @@ export class BookingsService {
         status: result.booking.status,
       };
     } catch (err) {
-      throw this.mapError(err);
+      this.mapError(err);
     }
   }
 
@@ -153,6 +154,11 @@ export class BookingsService {
     if (err instanceof ApplicationBadRequestError) {
       throw new BadRequestException(err.message);
     }
-    throw err;
+    if (err instanceof Error) {
+      throw err;
+    }
+    throw new Error(
+      typeof err === 'string' ? err : 'Unexpected error while handling booking',
+    );
   }
 }

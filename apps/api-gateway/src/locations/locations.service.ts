@@ -33,7 +33,11 @@ export class LocationsService {
     limit?: number;
     sortBy?: 'displayOrder' | 'trending';
   }) {
-    const { departmentSlug, limit = 20, sortBy = 'displayOrder' } = options ?? {};
+    const {
+      departmentSlug,
+      limit = 20,
+      sortBy = 'displayOrder',
+    } = options ?? {};
 
     try {
       const orderBy =

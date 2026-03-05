@@ -1,14 +1,14 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
-  UseGuards,
-  Request,
+  Get,
+  Param,
+  Patch,
+  Post,
   Query,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
 import { ExperiencesService } from './experiences.service';
 import { CreateExperienceDto } from './dto/create-experience.dto';
@@ -17,6 +17,7 @@ import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { OrganizationGuard } from '../common/guards/organization.guard';
 import { SubscriptionGuard } from '../common/guards/subscription.guard';
 import { Public } from '../common/decorators/public.decorator';
+import type { AuthenticatedRequest } from '../common/types/authenticated-request';
 
 @Controller('dashboard/experiences')
 @UseGuards(SupabaseAuthGuard, OrganizationGuard, SubscriptionGuard)
@@ -24,7 +25,10 @@ export class ExperiencesController {
   constructor(private readonly experiencesService: ExperiencesService) {}
 
   @Post()
-  create(@Body() createExperienceDto: CreateExperienceDto, @Request() req) {
+  create(
+    @Body() createExperienceDto: CreateExperienceDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     return this.experiencesService.create(
       createExperienceDto,
       req.user.userId,
@@ -38,30 +42,32 @@ export class ExperiencesController {
     @Query('country') country?: string,
     @Query('category') category?: string,
     @Query('minParticipants') minParticipants?: string,
-    @Request() req?: { user?: { organizationId?: string | null } },
+    @Request() req?: AuthenticatedRequest,
   ) {
     return this.experiencesService.findAll({
       city,
       country,
       category,
-      minParticipants: minParticipants ? parseInt(minParticipants, 10) : undefined,
+      minParticipants: minParticipants
+        ? parseInt(minParticipants, 10)
+        : undefined,
       organizationId: req?.user?.organizationId ?? null,
     });
   }
 
   @Get(':id')
-  findOne(
-    @Param('id') id: string,
-    @Request() req: { user?: { organizationId?: string | null } },
-  ) {
-    return this.experiencesService.findOne(id, req.user?.organizationId ?? null);
+  findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.experiencesService.findOne(
+      id,
+      req.user?.organizationId ?? null,
+    );
   }
 
   @Patch(':id')
   update(
     @Param('id') id: string,
     @Body() updateExperienceDto: UpdateExperienceDto,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.experiencesService.update(
       id,
@@ -72,7 +78,7 @@ export class ExperiencesController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string, @Request() req) {
+  remove(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.experiencesService.remove(
       id,
       req.user.userId,
@@ -81,7 +87,7 @@ export class ExperiencesController {
   }
 
   @Patch(':id/publish')
-  publish(@Param('id') id: string, @Request() req) {
+  publish(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.experiencesService.publish(
       id,
       req.user.userId,
@@ -108,7 +114,9 @@ export class PublicExperiencesController {
       city,
       country,
       category,
-      minParticipants: minParticipants ? parseInt(minParticipants, 10) : undefined,
+      minParticipants: minParticipants
+        ? parseInt(minParticipants, 10)
+        : undefined,
       listingType,
     });
   }

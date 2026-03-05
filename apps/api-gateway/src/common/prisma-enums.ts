@@ -18,4 +18,5 @@ export const SubscriptionStatus = {
   PAST_DUE: 'PAST_DUE',
 } as const;
 
-export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus];
+export type SubscriptionStatus =
+  (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus];

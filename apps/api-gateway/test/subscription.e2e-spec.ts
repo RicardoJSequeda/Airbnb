@@ -38,7 +38,12 @@ describe('SubscriptionGuard (e2e)', () => {
   });
 
   beforeEach(async () => {
-    const password = await bcrypt.hash('test123456', 10);
+    type BcryptHash = (
+      data: string | Buffer,
+      rounds: number,
+    ) => Promise<string>;
+    /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- bcrypt types not fully resolved */
+    const password = await (bcrypt.hash as BcryptHash)('test123456', 10);
 
     const org = await prisma.organization.create({
       data: {
@@ -72,7 +77,8 @@ describe('SubscriptionGuard (e2e)', () => {
       .send({ email: user.email, password: 'test123456' })
       .expect(201);
 
-    authToken = loginRes.body.token;
+    const body = loginRes.body as { token?: string };
+    authToken = body.token ?? '';
   });
 
   afterEach(async () => {
@@ -98,11 +104,16 @@ describe('SubscriptionGuard (e2e)', () => {
       .set('Authorization', `Bearer ${authToken}`)
       .expect(403)
       .expect((res) => {
-        expect(res.body).toMatchObject({
+        const resBody = res.body as {
+          success?: boolean;
+          errorCode?: string;
+          message?: unknown;
+        };
+        expect(resBody).toMatchObject({
           success: false,
           errorCode: 'SUBSCRIPTION_INACTIVE',
         });
-        expect(res.body.message).toBeDefined();
+        expect(resBody.message).toBeDefined();
       });
   });
 });

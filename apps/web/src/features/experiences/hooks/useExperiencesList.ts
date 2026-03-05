@@ -32,19 +32,21 @@ export function useExperiencesList(filters: ExperiencesFilters): UseExperiencesL
   const { city, country, category, minParticipants, listingType } = filters
 
   useEffect(() => {
-    setLoading(true)
-    setError(null)
-    publicExperiencesApi
-      .getAll({
-        city,
-        country,
-        category,
-        minParticipants,
-        listingType,
-      })
-      .then(setExperiences)
-      .catch((err) => setError(parseErrorMessage(err, 'Error al cargar experiencias')))
-      .finally(() => setLoading(false))
+    Promise.resolve().then(() => {
+      setLoading(true)
+      setError(null)
+      publicExperiencesApi
+        .getAll({
+          city,
+          country,
+          category,
+          minParticipants,
+          listingType,
+        })
+        .then(setExperiences)
+        .catch((err) => setError(parseErrorMessage(err, 'Error al cargar experiencias')))
+        .finally(() => setLoading(false))
+    })
   }, [city, country, category, minParticipants, listingType])
 
   return { experiences, loading, error }

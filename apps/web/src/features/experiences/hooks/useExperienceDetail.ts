@@ -22,13 +22,15 @@ export function useExperienceDetail(id: string | null | undefined): UseExperienc
 
   useEffect(() => {
     if (!id) return
-    setLoading(true)
-    setError(null)
-    publicExperiencesApi
-      .getById(id)
-      .then(setExperience)
-      .catch((err) => setError(parseErrorMessage(err, 'Error al cargar la experiencia')))
-      .finally(() => setLoading(false))
+    Promise.resolve().then(() => {
+      setLoading(true)
+      setError(null)
+      publicExperiencesApi
+        .getById(id)
+        .then(setExperience)
+        .catch((err) => setError(parseErrorMessage(err, 'Error al cargar la experiencia')))
+        .finally(() => setLoading(false))
+    })
   }, [id])
 
   return { experience, loading, error }

@@ -1,4 +1,5 @@
 import { OutboxRelayService } from './outbox-relay.service';
+import type { PrismaOutboxClient } from './infrastructure/prisma-outbox.client';
 
 describe('OutboxRelayService', () => {
   it('publishes and marks processed event', async () => {
@@ -23,16 +24,16 @@ describe('OutboxRelayService', () => {
         .fn()
         .mockResolvedValueOnce([{ id: 'e1' }])
         .mockResolvedValueOnce([]),
-    } as any;
+    } as unknown as PrismaOutboxClient;
 
     const kafkaMock = {
       publish: jest.fn().mockResolvedValue(undefined),
-    } as any;
+    } as unknown as { publish: jest.Mock };
 
     const metricsMock = {
       inc: jest.fn(),
       setGauge: jest.fn(),
-    } as any;
+    } as unknown as { inc: jest.Mock; setGauge: jest.Mock };
 
     const configMock = {
       get: jest.fn((key: string) => {
@@ -45,14 +46,14 @@ describe('OutboxRelayService', () => {
         };
         return values[key];
       }),
-    } as any;
+    } as unknown as { get: jest.Mock };
 
     const service = new OutboxRelayService(
       prismaMock,
-      kafkaMock,
-      { dispatch: jest.fn() } as any,
+      kafkaMock as never,
+      { dispatch: jest.fn() } as never,
       metricsMock,
-      configMock,
+      configMock as never,
     );
     await service.flushPendingEvents();
 

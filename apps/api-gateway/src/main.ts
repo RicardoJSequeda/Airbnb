@@ -55,4 +55,4 @@ async function bootstrap() {
   logger.log(`API running on port ${port}`);
   logger.log(`CORS enabled for: ${frontendUrl}`);
 }
-bootstrap();
+void bootstrap();

@@ -35,7 +35,7 @@ export class PrismaPaymentsRepository implements IPaymentsRepository {
     await this.prisma.payment.update({
       where: { bookingId },
       data: {
-        status: data.status as any,
+        status: data.status,
         ...(data.paidAt && { paidAt: data.paidAt }),
         ...(data.platformFeeAmount != null && {
           platformFeeAmount: data.platformFeeAmount,

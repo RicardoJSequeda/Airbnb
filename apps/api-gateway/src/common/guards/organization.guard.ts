@@ -1,13 +1,14 @@
 import {
-  Injectable,
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '../prisma-enums';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { SKIP_ORGANIZATION_CHECK_KEY } from '../decorators/organization.decorator';
+import type { AuthenticatedRequest } from '../types/authenticated-request';
 
 /**
  * Garantiza aislamiento fuerte entre organizaciones:
@@ -33,7 +34,9 @@ export class OrganizationGuard implements CanActivate {
     );
     if (skipOrgCheck) return true;
 
-    const { user } = context.switchToHttp().getRequest();
+    const { user } =
+      context.switchToHttp().getRequest<AuthenticatedRequest | undefined>() ??
+      {};
     if (!user) return true; // Auth guard ya falló o no está aplicado
 
     if (user.role === UserRole.SUPER_ADMIN) return true;

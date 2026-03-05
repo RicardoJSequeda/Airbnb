@@ -1,10 +1,10 @@
 import {
-  Controller,
-  Post,
   Body,
+  Controller,
   Get,
-  UseGuards,
+  Post,
   Request,
+  UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -14,6 +14,7 @@ import { OAuthLoginDto } from './dto/oauth-login.dto';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { OrganizationGuard } from '../common/guards/organization.guard';
 import { Public } from '../common/decorators/public.decorator';
+import type { AuthenticatedRequest } from '../common/types/authenticated-request';
 
 @Controller('auth')
 export class AuthController {
@@ -42,7 +43,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(SupabaseAuthGuard, OrganizationGuard)
-  getProfile(@Request() req) {
+  getProfile(@Request() req: AuthenticatedRequest) {
     return this.authService.getProfile(req.user.userId);
   }
 }

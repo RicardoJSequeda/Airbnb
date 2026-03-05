@@ -10,10 +10,8 @@ import type { ExistingBookingSlot } from '../domain/booking-availability.domain'
 import type { IBookingsRepository } from '../domain/ports/bookings.repository';
 import type { IStripePort } from '../domain/ports/stripe.port';
 import type { IRedisPort } from '../domain/ports/redis.port';
-import {
-  ApplicationBadRequestError,
-  ApplicationNotFoundError,
-} from './errors';
+import { BookingDateValidationError } from '../domain/booking.domain';
+import { ApplicationBadRequestError, ApplicationNotFoundError } from './errors';
 
 const BOOKING_LOCK_TTL = 60 * 15;
 const BOOKING_HOLD_TTL = 60 * 15;
@@ -116,12 +114,14 @@ export class CreateBookingUseCase {
       now,
     );
     if (!createResult.success) {
-      if (createResult.error === 'CHECK_IN_IN_PAST') {
+      if (createResult.error === BookingDateValidationError.CheckInInPast) {
         throw new ApplicationBadRequestError(
           'Check-in date must be in the future',
         );
       }
-      if (createResult.error === 'CHECK_OUT_BEFORE_CHECK_IN') {
+      if (
+        createResult.error === BookingDateValidationError.CheckOutBeforeCheckIn
+      ) {
         throw new ApplicationBadRequestError(
           'Check-out date must be after check-in date',
         );
@@ -222,14 +222,23 @@ export class CreateBookingUseCase {
   }
 
   private async filterPendingWithHold(
-    pending: Array<{ id: string; startDate: Date; endDate: Date; status: string }>,
+    pending: Array<{
+      id: string;
+      startDate: Date;
+      endDate: Date;
+      status: string;
+    }>,
   ): Promise<ExistingBookingSlot[]> {
     if (!this.redisPort.isAvailable()) return [];
     const out: ExistingBookingSlot[] = [];
     for (const p of pending) {
       const held = await this.redisPort.get(`${HOLD_KEY_PREFIX}${p.id}`);
       if (held !== null) {
-        out.push({ startDate: p.startDate, endDate: p.endDate, status: p.status });
+        out.push({
+          startDate: p.startDate,
+          endDate: p.endDate,
+          status: p.status,
+        });
       }
     }
     return out;

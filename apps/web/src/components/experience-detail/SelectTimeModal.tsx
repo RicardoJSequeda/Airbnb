@@ -67,7 +67,7 @@ const FIXED_TIME_LABELS = [
 function addMinutesToTimeLabel(startLabel: string, durationMinutes: number): string {
   const match = startLabel.match(/^(\d{1,2}):(\d{2})\s*(a\.m\.|p\.m\.)$/i)
   if (!match) return `${startLabel} – `
-  let [, hStr, mStr, period] = match
+  const [, hStr, mStr, period] = match
   let h = parseInt(hStr!, 10)
   const m = parseInt(mStr!, 10)
   if (period?.toLowerCase() === 'p.m.' && h !== 12) h += 12

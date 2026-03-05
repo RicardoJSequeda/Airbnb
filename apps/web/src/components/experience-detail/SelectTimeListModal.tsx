@@ -10,10 +10,13 @@ import type { ExperienceSlot } from './ExperienceBookingCard'
 interface SelectTimeListModalProps {
   isOpen: boolean
   onClose: () => void
+  experienceId?: string
   experienceTitle: string
   slots: ExperienceSlot[]
   pricePerParticipant: number
   currency: string
+  durationMinutes?: number
+  imageUrl?: string
   onSelectSlot: (slot: ExperienceSlot, adults: number, children: number) => void
 }
 

@@ -2,13 +2,26 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  ForbiddenException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
+
+type PropertyAmenityRow = { amenityName: string };
+type PropertyImageRow = { imageUrl: string; displayOrder: number };
+type PropertyWithRelations = {
+  amenities?: string | null;
+  images?: string | null;
+  price?: unknown;
+  propertyAmenities?: PropertyAmenityRow[] | null;
+  propertyImages?: PropertyImageRow[] | null;
+} & Record<string, unknown>;
+
+type PublicPropertyRow = PropertyWithRelations & {
+  reviews?: Array<{ rating: number }> | null;
+};
 
 const PROPERTY_LIST_CACHE_TTL = 60;
 
@@ -66,7 +79,7 @@ export class PropertiesService {
       });
     });
 
-    return this.formatProperty(property);
+    return this.formatProperty(property as PropertyWithRelations);
   }
 
   async findAll(filters?: {
@@ -75,20 +88,22 @@ export class PropertiesService {
     propertyType?: string;
     organizationId?: string | null;
   }) {
-    const where: any = { status: 'PUBLISHED' };
+    const where: Record<string, unknown> = { status: 'PUBLISHED' };
     if (filters?.organizationId) where.organizationId = filters.organizationId;
 
     if (filters?.city) where.city = filters.city;
     if (filters?.country) where.country = filters.country;
     if (filters?.propertyType) where.propertyType = filters.propertyType;
 
-    const cacheKey = `properties:list:${where.organizationId ?? ''}:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.propertyType ?? ''}`;
+    const orgId =
+      typeof where.organizationId === 'string' ? where.organizationId : '';
+    const cacheKey = `properties:list:${orgId}:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.propertyType ?? ''}`;
     try {
       if (this.redis.isAvailable()) {
         const cached = await this.redis.get(cacheKey);
         if (cached) {
           try {
-            return JSON.parse(cached);
+            return JSON.parse(cached) as unknown[];
           } catch {
             /* invalid cache */
           }
@@ -111,7 +126,9 @@ export class PropertiesService {
       }),
     });
 
-    const result = properties.map((p) => this.formatProperty(p));
+    const result = properties.map((p) =>
+      this.formatProperty(p as PropertyWithRelations),
+    );
     try {
       if (this.redis.isAvailable()) {
         await this.redis.set(
@@ -158,7 +175,7 @@ export class PropertiesService {
       throw new NotFoundException('Property not found');
     }
 
-    return this.formatProperty(property);
+    return this.formatProperty(property as PropertyWithRelations);
   }
 
   async update(
@@ -167,7 +184,10 @@ export class PropertiesService {
     userId: string,
     organizationId?: string | null,
   ) {
-    const where: any = { id, hostId: userId };
+    const where: { id: string; hostId: string; organizationId?: string } = {
+      id,
+      hostId: userId,
+    };
     if (organizationId) where.organizationId = organizationId;
 
     const property = await this.prisma.property.findFirst({ where });
@@ -183,7 +203,9 @@ export class PropertiesService {
         where: { id },
         data: {
           ...rest,
-          ...(amenities !== undefined && { amenities: JSON.stringify(amenities) }),
+          ...(amenities !== undefined && {
+            amenities: JSON.stringify(amenities),
+          }),
           ...(images !== undefined && { images: JSON.stringify(images) }),
         },
       });
@@ -192,7 +214,10 @@ export class PropertiesService {
         await tx.propertyAmenity.deleteMany({ where: { propertyId: id } });
         if (amenities.length > 0) {
           await tx.propertyAmenity.createMany({
-            data: amenities.map((amenityName) => ({ propertyId: id, amenityName })),
+            data: amenities.map((amenityName) => ({
+              propertyId: id,
+              amenityName,
+            })),
           });
         }
       }
@@ -217,11 +242,14 @@ export class PropertiesService {
       });
     });
 
-    return this.formatProperty(updated);
+    return this.formatProperty(updated as PropertyWithRelations);
   }
 
   async remove(id: string, userId: string, organizationId?: string | null) {
-    const where: any = { id, hostId: userId };
+    const where: { id: string; hostId: string; organizationId?: string } = {
+      id,
+      hostId: userId,
+    };
     if (organizationId) where.organizationId = organizationId;
 
     const property = await this.prisma.property.findFirst({ where });
@@ -238,7 +266,10 @@ export class PropertiesService {
   }
 
   async publish(id: string, userId: string, organizationId?: string | null) {
-    const where: any = { id, hostId: userId };
+    const where: { id: string; hostId: string; organizationId?: string } = {
+      id,
+      hostId: userId,
+    };
     if (organizationId) where.organizationId = organizationId;
 
     const property = await this.prisma.property.findFirst({ where });
@@ -252,7 +283,7 @@ export class PropertiesService {
       data: { status: 'PUBLISHED' },
     });
 
-    return this.formatProperty(updated);
+    return this.formatProperty(updated as PropertyWithRelations);
   }
 
   /** API pública: todas las propiedades PUBLISHED del marketplace (sin org filter). Nunca expone organizationId. */
@@ -260,9 +291,9 @@ export class PropertiesService {
     city?: string;
     country?: string;
     propertyType?: string;
-  }) {
+  }): Promise<unknown[]> {
     try {
-      const where: any = { status: 'PUBLISHED' };
+      const where: Record<string, unknown> = { status: 'PUBLISHED' };
       if (filters?.city) where.city = filters.city;
       if (filters?.country) where.country = filters.country;
       if (filters?.propertyType) where.propertyType = filters.propertyType;
@@ -273,7 +304,7 @@ export class PropertiesService {
           const cached = await this.redis.get(cacheKey);
           if (cached) {
             try {
-              return JSON.parse(cached);
+              return JSON.parse(cached) as unknown[];
             } catch {
               /* invalid cache */
             }
@@ -296,7 +327,9 @@ export class PropertiesService {
         }),
       });
 
-      const result = properties.map((p) => this.formatPropertyForPublic(p));
+      const result = properties.map((p) =>
+        this.formatPropertyForPublic(p as PublicPropertyRow),
+      );
       try {
         if (this.redis.isAvailable()) {
           await this.redis.set(
@@ -308,7 +341,7 @@ export class PropertiesService {
       } catch {
         /* Redis down: ignorar cache */
       }
-      return result;
+      return result as unknown[];
     } catch (err) {
       this.logger.warn(
         `findAllPublic failed (returning []): ${err instanceof Error ? err.message : String(err)}`,
@@ -318,7 +351,7 @@ export class PropertiesService {
   }
 
   /** API pública: una propiedad PUBLISHED por id. Nunca expone organizationId. */
-  async findOnePublic(id: string) {
+  async findOnePublic(id: string): Promise<unknown> {
     try {
       const property = await this.prisma.property.findFirst({
         where: { id, status: 'PUBLISHED' },
@@ -348,7 +381,7 @@ export class PropertiesService {
         throw new NotFoundException('Property not found');
       }
 
-      return this.formatPropertyForPublic(property);
+      return this.formatPropertyForPublic(property) as unknown;
     } catch (err) {
       if (err instanceof NotFoundException) throw err;
       this.logger.warn(
@@ -359,7 +392,6 @@ export class PropertiesService {
       );
     }
   }
-
 
   private propertyRelationsInclude(extra: Record<string, unknown> = {}) {
     return {
@@ -374,7 +406,9 @@ export class PropertiesService {
     };
   }
 
-  private formatProperty(property: any) {
+  private formatProperty(
+    property: PropertyWithRelations,
+  ): Record<string, unknown> {
     const {
       amenities,
       images,
@@ -386,14 +420,17 @@ export class PropertiesService {
 
     const amenitiesFromRelations =
       Array.isArray(propertyAmenities) && propertyAmenities.length > 0
-        ? propertyAmenities.map((item: any) => item.amenityName)
+        ? propertyAmenities.map((item: PropertyAmenityRow) => item.amenityName)
         : null;
     const imagesFromRelations =
       Array.isArray(propertyImages) && propertyImages.length > 0
         ? propertyImages
             .slice()
-            .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
-            .map((item: any) => item.imageUrl)
+            .sort(
+              (a: PropertyImageRow, b: PropertyImageRow) =>
+                a.displayOrder - b.displayOrder,
+            )
+            .map((item: PropertyImageRow) => item.imageUrl)
         : null;
 
     return {
@@ -406,24 +443,27 @@ export class PropertiesService {
 
   private safeJsonParse(value: unknown, fallback: unknown): unknown {
     if (value == null || value === '') return fallback;
+    if (typeof value !== 'string') return fallback;
     try {
-      const s = typeof value === 'string' ? value : String(value);
-      return JSON.parse(s);
+      return JSON.parse(value);
     } catch {
       return fallback;
     }
   }
 
   /** Formato para API pública: omite organizationId, incluye averageRating y totalReviews. */
-  private formatPropertyForPublic(property: any) {
+  private formatPropertyForPublic(
+    property: PublicPropertyRow,
+  ): Record<string, unknown> {
     const formatted = this.formatProperty(property);
-    const { organizationId, ...publicData } = formatted;
+    const { organizationId: _organizationId, ...publicData } = formatted;
+    void _organizationId;
 
     const reviews = Array.isArray(property.reviews) ? property.reviews : [];
     const totalReviews = reviews.length;
     const sum = reviews.reduce(
-      (acc: number, r: any) =>
-        acc + (typeof r?.rating === 'number' ? r.rating : 0),
+      (acc: number, r: { rating: number }) =>
+        acc + (typeof r.rating === 'number' ? r.rating : 0),
       0,
     );
     const averageRating =
