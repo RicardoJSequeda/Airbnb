@@ -87,9 +87,13 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
         const batch = await this.fetchBatchWithLock(this.batchSize);
         hasMore = batch.length === this.batchSize;
 
+        this.metrics.setGauge('outbox_batch_size', batch.length);
+
         for (const event of batch) {
           await this.processEvent(event);
         }
+
+        await this.refreshOperationalGauges();
       }
     } finally {
       this.isRunning = false;
@@ -162,7 +166,7 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
         regionId: (event as { regionId?: string }).regionId,
       });
 
-      this.metrics.inc('outbox_processed_total');
+      this.metrics.inc('outbox_processed_total', 1, { status: 'ok', type: event.type, region: event.regionId ?? 'global' });
       await this.prisma.outboxEvent.update({
         where: { id: event.id },
         data: {
@@ -172,7 +176,7 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
       });
     } catch (error) {
       const retryCount = (event.retryCount ?? 0) + 1;
-      this.metrics.inc('outbox_retry_total');
+      this.metrics.inc('outbox_retry_total', 1, { type: event.type, region: event.regionId ?? 'global' });
       const message = error instanceof Error ? error.message : String(error);
 
       if (retryCount >= this.maxAttempts) {
@@ -189,7 +193,7 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
           regionId: (event as { regionId?: string }).regionId,
         });
 
-        this.metrics.inc('outbox_processed_total');
+        this.metrics.inc('outbox_processed_total', 1, { status: 'dead_letter', type: event.type, region: event.regionId ?? 'global' });
         await this.prisma.outboxEvent.update({
           where: { id: event.id },
           data: {
@@ -216,7 +220,7 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
         regionId: (event as { regionId?: string }).regionId,
       });
 
-      this.metrics.inc('outbox_processed_total');
+      this.metrics.inc('outbox_processed_total', 1, { status: 'scheduled_retry', type: event.type, region: event.regionId ?? 'global' });
       await this.prisma.outboxEvent.update({
         where: { id: event.id },
         data: {
@@ -226,18 +230,49 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      this.metrics.setGauge(
-        'outbox_lag_seconds',
-        Math.max(
-          0,
-          (Date.now() - new Date(event['createdAt'] ?? Date.now()).getTime()) /
-            1000,
-        ),
+      const lagSeconds = Math.max(
+        0,
+        (Date.now() - new Date(event.createdAt ?? Date.now()).getTime()) / 1000,
       );
+      this.metrics.setGauge('outbox_lag_seconds', lagSeconds, {
+        type: event.type,
+        region: event.regionId ?? 'global',
+      });
+      this.metrics.observe('outbox_event_age_seconds', lagSeconds, {
+        type: event.type,
+        region: event.regionId ?? 'global',
+      });
       this.logger.warn(
         `Outbox event retry scheduled event=${event.id} retryCount=${retryCount} nextRetryAt=${nextRetryAt.toISOString()} reason=${message}`,
       );
     }
+  }
+
+
+  private async refreshOperationalGauges(): Promise<void> {
+    const pendingRows = await this.prismaOutbox.$queryRawUnsafe<{ total: number }[]>(
+      `SELECT COUNT(*)::int AS total
+       FROM bookings.outbox_events
+       WHERE "processedAt" IS NULL
+         AND "deadLetteredAt" IS NULL`,
+    );
+
+    const deadLetterRows = await this.prismaOutbox.$queryRawUnsafe<{ total: number }[]>(
+      `SELECT COUNT(*)::int AS total
+       FROM bookings.outbox_events
+       WHERE "deadLetteredAt" IS NOT NULL`,
+    );
+
+    const oldestPendingRows = await this.prismaOutbox.$queryRawUnsafe<{ seconds: number | null }[]>(
+      `SELECT EXTRACT(EPOCH FROM (NOW() - MIN("createdAt")))::float AS seconds
+       FROM bookings.outbox_events
+       WHERE "processedAt" IS NULL
+         AND "deadLetteredAt" IS NULL`,
+    );
+
+    this.metrics.setGauge('outbox_pending_events', pendingRows[0]?.total ?? 0);
+    this.metrics.setGauge('outbox_dead_letter_events', deadLetterRows[0]?.total ?? 0);
+    this.metrics.setGauge('outbox_oldest_pending_age_seconds', oldestPendingRows[0]?.seconds ?? 0);
   }
 
   private async sendToDeadLetter(
