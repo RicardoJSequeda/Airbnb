@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Globe, Menu, Search, ArrowLeft } from "lucide-react";
+import { Menu, Search, ArrowLeft } from "lucide-react";
 import Logo from "../shared/logo";
 import LoginModal from "../shared/LoginModal";
 import { ShareHostModal } from "../shared/ShareHostModal";
@@ -23,6 +23,12 @@ const isListingPage = (path: string) =>
 
 /** Solo logo, sin menú ni búsqueda (p. ej. Confirma y paga) */
 const isLogoOnlyPage = (path: string) => /^\/experiences\/[^/]+\/book\/?$/.test(path ?? '');
+
+/** Header minimalista: sin buscador ni Alojamientos/Experiencias/Servicios; solo logo + Conviértete en anfitrión + botón usuario */
+const isMinimalHeaderPage = (path: string) => {
+  const p = path ?? '';
+  return p.startsWith('/users/profile') || p === '/my-bookings' || p === '/my-reviews' || p.startsWith('/help') || p.startsWith('/invite') || p.startsWith('/cohost');
+};
 
 const Header = () => {
     const pathname = usePathname();
@@ -76,6 +82,7 @@ const Header = () => {
     };
 
     const logoOnly = isLogoOnlyPage(pathname ?? '');
+    const minimalHeader = isMinimalHeaderPage(pathname ?? '');
 
     return (
         <>
@@ -87,7 +94,7 @@ const Header = () => {
             ) : null}
             
             <header className={`fixed top-0 left-0 right-0 z-50 flex flex-col bg-white w-full border-b border-gray-200 shadow-sm transition-all duration-300 ease-in-out ${
-                logoOnly ? 'h-20' : showExpanded ? 'h-[200px]' : 'h-20'
+                logoOnly || minimalHeader ? 'h-20' : showExpanded ? 'h-[200px]' : 'h-20'
             }`}>
                 <nav className="h-20 flex-shrink-0 flex items-center justify-between w-full max-w-[1824px] mx-auto px-6 md:px-10 lg:px-12">
                     <div className="flex items-center gap-4">
@@ -105,7 +112,7 @@ const Header = () => {
                         </div>
                     </div>
                     
-                    {!logoOnly && (
+                    {!logoOnly && !minimalHeader && (
                     <>
                     <div className={`hidden lg:flex items-center gap-6 transition-all duration-300 ${
                         !compactMode && showExpanded ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none absolute'
@@ -253,32 +260,50 @@ const Header = () => {
                     )}
                     
                     {!logoOnly && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                         <button
                             type="button"
                             onClick={() => setShareHostModalOpen(true)}
-                            className="hidden md:block text-sm font-medium px-4 py-2.5 rounded-full hover:bg-gray-100 transition-all duration-200 cursor-pointer"
+                            className="hidden md:block text-sm font-medium text-[#222222] px-4 py-2.5 rounded-full hover:bg-gray-100 transition-all duration-200 cursor-pointer"
                           >
                             Conviértete en anfitrión
                           </button>
-                        
-                        <button className="p-2.5 hover:bg-gray-100 rounded-full transition-all duration-200 cursor-pointer" aria-label="Idioma">
-                            <Globe className="w-5 h-5 text-gray-700" />
-                        </button>
-                        
-                        <div className="relative">
+
+                        <div className="relative flex items-center gap-3">
+                        {isAuthenticated ? (
+                          <>
+                            <Link
+                              href="/users/profile"
+                              className="flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border border-gray-200 hover:shadow-md transition-all duration-200 flex-shrink-0"
+                              aria-label="Ir a mi perfil"
+                              onClick={() => setUserMenuOpen(false)}
+                            >
+                              {user?.avatar ? (
+                                <img src={user.avatar} alt={user?.name ?? 'Usuario'} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-amber-400 via-rose-400 to-violet-500 flex items-center justify-center">
+                                  <span className="text-white text-sm font-semibold">{user?.name?.[0]?.toUpperCase() || 'U'}</span>
+                                </div>
+                              )}
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => setUserMenuOpen((v) => !v)}
+                              className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-200 cursor-pointer"
+                              aria-label="Menú"
+                            >
+                              <Menu className="w-5 h-5 text-gray-700" />
+                            </button>
+                          </>
+                        ) : (
                             <button
                                 onClick={() => setUserMenuOpen((v) => !v)}
                                 className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-full hover:shadow-md transition-all duration-200 cursor-pointer"
                                 aria-label="Menú"
                             >
                                 <Menu className="w-5 h-5 text-gray-700" />
-                                {isAuthenticated && (
-                                    <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
-                                        <span className="text-white text-sm font-medium">{user?.name?.[0]?.toUpperCase() || 'U'}</span>
-                                    </div>
-                                )}
                             </button>
+                        )}
                             {userMenuOpen && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} aria-hidden />
@@ -308,6 +333,7 @@ const Header = () => {
                                         <div className="border-t border-gray-100">
                                             {isAuthenticated ? (
                                                 <>
+                                                    <Link href="/users/profile" className="block px-4 py-3 text-sm font-medium text-secondary hover:bg-gray-50" onClick={() => setUserMenuOpen(false)}>Perfil</Link>
                                                     <Link href="/my-bookings" className="block px-4 py-3 text-sm font-medium text-secondary hover:bg-gray-50" onClick={() => setUserMenuOpen(false)}>Mis reservas</Link>
                                                     <Link href="/my-reviews" className="block px-4 py-3 text-sm font-medium text-secondary hover:bg-gray-50" onClick={() => setUserMenuOpen(false)}>Mis reseñas</Link>
                                                     <button type="button" onClick={() => { logout(); setUserMenuOpen(false); }} className="block w-full text-left px-4 py-3 text-sm font-medium text-red-600 hover:bg-gray-50">
@@ -335,7 +361,7 @@ const Header = () => {
                     )}
                 </nav>
                 
-                {!logoOnly && (
+                {!logoOnly && !minimalHeader && (
                 <div className={`flex-1 flex items-center justify-center w-full max-w-[1824px] mx-auto px-6 md:px-10 lg:px-12 transition-all duration-300 ease-out ${
                     showExpanded 
                         ? 'opacity-100 translate-y-0 visible min-h-0' 

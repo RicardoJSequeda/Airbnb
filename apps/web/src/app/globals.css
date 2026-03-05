@@ -126,3 +126,16 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Transición panel perfil: opacidad 0 → 100, 150ms ease-in-out (estilo Airbnb) */
+@keyframes profile-panel-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.profile-panel-transition {
+  animation: profile-panel-fade-in 0.15s ease-in-out forwards;
+}
