@@ -23,7 +23,11 @@ describe('OutboxRelayService', () => {
       $queryRawUnsafe: jest
         .fn()
         .mockResolvedValueOnce([{ id: 'e1' }])
-        .mockResolvedValueOnce([]),
+        .mockResolvedValueOnce([{ total: 0 }])
+        .mockResolvedValueOnce([{ total: 0 }])
+        .mockResolvedValueOnce([{ seconds: 0 }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValue([{ total: 0 }]),
     } as unknown as PrismaOutboxClient;
 
     const kafkaMock = {
