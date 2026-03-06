@@ -32,10 +32,16 @@ export class PrismaPaymentsRepository implements IPaymentsRepository {
     bookingId: string,
     data: UpdatePaymentStatusData,
   ): Promise<void> {
+    type PaymentStatusEnum =
+      | 'PENDING'
+      | 'COMPLETED'
+      | 'FAILED'
+      | 'REFUNDED'
+      | 'CANCELLED';
     await this.prisma.payment.update({
       where: { bookingId },
       data: {
-        status: data.status,
+        status: data.status as PaymentStatusEnum,
         ...(data.paidAt && { paidAt: data.paidAt }),
         ...(data.platformFeeAmount != null && {
           platformFeeAmount: data.platformFeeAmount,

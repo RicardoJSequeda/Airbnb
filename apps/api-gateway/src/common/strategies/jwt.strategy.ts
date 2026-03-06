@@ -26,9 +26,23 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
   }
 
-  async validate(payload: { sub: string; email: string }) {
-    if (!payload.sub || !payload.email) {
+  async validate(payload: { sub: string; email?: string; jti?: string }) {
+    if (!payload.sub) {
       throw new UnauthorizedException('Invalid token payload');
+    }
+
+    // Si el token tiene jti (nuestro JWT de login/register), validar sesión en BD
+    if (payload.jti) {
+      const session = await this.prisma.session.findUnique({
+        where: { jti: payload.jti },
+      });
+      if (
+        !session ||
+        session.expiresAt < new Date() ||
+        session.userId !== payload.sub
+      ) {
+        throw new UnauthorizedException('Session expired or invalid');
+      }
     }
 
     const user = await this.prisma.user.findUnique({
@@ -45,6 +59,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: user.email,
       role: user.role,
       organizationId: user.organizationId,
+      ...(payload.jti && { jti: payload.jti }),
     };
   }
 }

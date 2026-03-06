@@ -24,4 +24,9 @@ export const authApi = {
     const response = await apiClient.get<User>('/auth/me')
     return response.data
   },
+
+  /** Cierra la sesión en el servidor (borra la sesión en BD) y limpia el token. */
+  logout: async () => {
+    await apiClient.post('/auth/logout')
+  },
 }

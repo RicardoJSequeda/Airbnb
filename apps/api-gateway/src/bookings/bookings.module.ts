@@ -63,5 +63,6 @@ import { PrismaService } from '../common/prisma.service';
     PrismaService,
     SubscriptionGuard,
   ],
+  exports: [BookingsService],
 })
 export class BookingsModule {}

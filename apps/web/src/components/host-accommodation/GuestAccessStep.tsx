@@ -7,12 +7,12 @@ interface GuestAccessStepProps {
 
 export function GuestAccessStep({ selectedAccessId, onSelect }: GuestAccessStepProps) {
   return (
-    <section className="max-w-[1200px] mx-auto px-6">
-      <h2 className="text-5xl lg:text-6xl leading-[1.05] font-semibold text-[#222222] mb-10 max-w-[1020px]">
+    <section className="max-w-[800px] mx-auto px-3 sm:px-4 py-3">
+      <h2 className="text-lg sm:text-xl font-semibold text-[#222222] mb-4 max-w-[560px]">
         ¿De qué tipo de alojamiento dispondrán los huéspedes?
       </h2>
 
-      <div className="space-y-4 pb-10">
+      <div className="space-y-2 sm:space-y-2.5 pb-4">
         {guestAccessOptions.map((option) => {
           const Icon = option.icon
           const isSelected = selectedAccessId === option.id
@@ -21,19 +21,19 @@ export function GuestAccessStep({ selectedAccessId, onSelect }: GuestAccessStepP
               key={option.id}
               type="button"
               onClick={() => onSelect(option.id)}
-              className={`w-full text-left rounded-2xl border px-7 py-6 flex items-center justify-between gap-6 transition ${
+              className={`w-full text-left rounded-xl border px-4 py-3 sm:py-3.5 flex items-center justify-between gap-4 transition ${
                 isSelected
                   ? 'border-[#222222] bg-white shadow-[0_0_0_2px_#222222]'
                   : 'border-[#D2D2D2] bg-[#F7F7F7] hover:border-[#7A7A7A]'
               }`}
             >
-              <div>
-                <h3 className="text-3xl lg:text-4xl font-medium text-[#222222]">{option.title}</h3>
-                <p className="text-xl lg:text-2xl leading-[1.25] text-[#5D5D5D] mt-2 max-w-[900px]">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base sm:text-lg font-medium text-[#222222]">{option.title}</h3>
+                <p className="text-sm text-[#5D5D5D] mt-1 leading-snug max-w-[520px]">
                   {option.description}
                 </p>
               </div>
-              <Icon className="w-12 h-12 text-[#222222] flex-shrink-0" strokeWidth={1.8} />
+              <Icon className="w-8 h-8 sm:w-9 sm:h-9 text-[#222222] flex-shrink-0" strokeWidth={1.8} />
             </button>
           )
         })}

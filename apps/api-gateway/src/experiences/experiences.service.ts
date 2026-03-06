@@ -111,7 +111,7 @@ export class ExperiencesService {
       });
     });
 
-    return this.formatExperience(experience as ExperienceWithRelations);
+    return this.formatExperience(experience as unknown as ExperienceWithRelations);
   }
 
   async findAll(filters?: {
@@ -159,7 +159,7 @@ export class ExperiencesService {
     });
 
     const result = experiences.map((e) =>
-      this.formatExperience(e as ExperienceWithRelations),
+      this.formatExperience(e as unknown as ExperienceWithRelations),
     );
     if (this.redis.isAvailable()) {
       await this.redis.set(
@@ -192,7 +192,7 @@ export class ExperiencesService {
       throw new NotFoundException('Experience not found');
     }
 
-    return this.formatExperience(experience as ExperienceWithRelations);
+    return this.formatExperience(experience as unknown as ExperienceWithRelations);
   }
 
   async update(
@@ -277,7 +277,7 @@ export class ExperiencesService {
       });
     });
 
-    return this.formatExperience(updated as ExperienceWithRelations);
+    return this.formatExperience(updated as unknown as ExperienceWithRelations);
   }
 
   async remove(id: string, hostId: string, organizationId: string) {
@@ -314,7 +314,7 @@ export class ExperiencesService {
       data: { status: 'PUBLISHED' },
     });
 
-    return this.formatExperience(updated as ExperienceWithRelations);
+    return this.formatExperience(updated as unknown as ExperienceWithRelations);
   }
 
   /** Categorías que se consideran "servicios" (solo aparecen en módulo Servicios). El resto son "experiencias". */
@@ -387,7 +387,7 @@ export class ExperiencesService {
       });
 
       const result = experiences.map((e) =>
-        this.formatExperienceForPublic(e as PublicExperienceRow),
+        this.formatExperienceForPublic(e as unknown as PublicExperienceRow),
       );
       if (this.redis.isAvailable()) {
         await this.redis.set(
@@ -439,7 +439,9 @@ export class ExperiencesService {
         throw new NotFoundException('Experience not found');
       }
 
-      return this.formatExperienceForPublic(experience as PublicExperienceRow);
+      return this.formatExperienceForPublic(
+        experience as unknown as PublicExperienceRow,
+      );
     } catch (err) {
       if (err instanceof NotFoundException) throw err;
       this.logger.warn(

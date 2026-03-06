@@ -32,7 +32,7 @@ export class ExperiencesController {
     return this.experiencesService.create(
       createExperienceDto,
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? '',
     );
   }
 
@@ -73,7 +73,7 @@ export class ExperiencesController {
       id,
       updateExperienceDto,
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? '',
     );
   }
 
@@ -82,7 +82,7 @@ export class ExperiencesController {
     return this.experiencesService.remove(
       id,
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? '',
     );
   }
 
@@ -91,7 +91,7 @@ export class ExperiencesController {
     return this.experiencesService.publish(
       id,
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? '',
     );
   }
 }

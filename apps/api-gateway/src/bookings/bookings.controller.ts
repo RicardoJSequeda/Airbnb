@@ -33,7 +33,7 @@ export class BookingsController {
     return this.bookingsService.create(
       createBookingDto,
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? '',
     );
   }
 
@@ -41,7 +41,7 @@ export class BookingsController {
   findMyBookings(@Request() req: AuthenticatedRequest) {
     return this.bookingsService.findAllByGuest(
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? '',
     );
   }
 
@@ -51,7 +51,7 @@ export class BookingsController {
   findHostBookings(@Request() req: AuthenticatedRequest) {
     return this.bookingsService.findAllByHost(
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? '',
     );
   }
 
@@ -60,7 +60,7 @@ export class BookingsController {
     return this.bookingsService.findOne(
       id,
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? '',
     );
   }
 
@@ -70,7 +70,7 @@ export class BookingsController {
     return this.bookingsService.cancel(
       id,
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? '',
     );
   }
 
@@ -80,7 +80,7 @@ export class BookingsController {
     return this.bookingsService.confirm(
       id,
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? '',
     );
   }
 
@@ -90,7 +90,7 @@ export class BookingsController {
     return this.bookingsService.reject(
       id,
       req.user.userId,
-      req.user.organizationId,
+      req.user.organizationId ?? '',
     );
   }
 }

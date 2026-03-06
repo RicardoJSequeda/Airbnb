@@ -46,4 +46,13 @@ export class AuthController {
   getProfile(@Request() req: AuthenticatedRequest) {
     return this.authService.getProfile(req.user.userId);
   }
+
+  @Post('logout')
+  @UseGuards(SupabaseAuthGuard)
+  logout(@Request() req: AuthenticatedRequest) {
+    if (req.user.jti) {
+      return this.authService.logout(req.user.jti).then(() => ({ success: true }));
+    }
+    return { success: true };
+  }
 }

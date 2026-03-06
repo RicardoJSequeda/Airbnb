@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   Injectable,
   UnauthorizedException,
@@ -13,6 +14,8 @@ import { UserRole } from '../common/prisma-enums';
 import { PrismaService } from '../common/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+
+const TOKEN_EXPIRY_DAYS = 7;
 
 type BcryptModule = {
   hash: (
@@ -33,6 +36,33 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {}
+
+  /**
+   * Crea una sesión en BD y devuelve un JWT con jti. Así el usuario puede iniciar sesión desde
+   * cualquier dispositivo (cada dispositivo tiene su propia sesión en BD).
+   */
+  private async createSessionAndToken(
+    userId: string,
+    email: string,
+    userAgent?: string,
+  ): Promise<string> {
+    const jti = randomUUID();
+    const expiresAt = new Date(
+      Date.now() + TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+    );
+    await this.prisma.session.create({
+      data: {
+        userId,
+        jti,
+        expiresAt,
+        userAgent: userAgent ?? null,
+      },
+    });
+    return this.jwtService.sign(
+      { sub: userId, email, jti },
+      { expiresIn: `${TOKEN_EXPIRY_DAYS}d` },
+    );
+  }
 
   async register(registerDto: RegisterDto) {
     const { email, password, name } = registerDto;
@@ -63,8 +93,7 @@ export class AuthService {
       },
     });
 
-    const payload = { email: user.email, sub: user.id };
-    const token = this.jwtService.sign(payload);
+    const token = await this.createSessionAndToken(user.id, user.email);
 
     return {
       user: {
@@ -100,8 +129,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { email: user.email, sub: user.id };
-    const token = this.jwtService.sign(payload);
+    const token = await this.createSessionAndToken(user.id, user.email);
 
     return {
       user: {
@@ -114,6 +142,11 @@ export class AuthService {
       },
       token,
     };
+  }
+
+  /** Cierra la sesión en BD (invalida el token en este dispositivo). */
+  async logout(jti: string): Promise<void> {
+    await this.prisma.session.deleteMany({ where: { jti } });
   }
 
   async getProfile(userId: string) {
@@ -254,8 +287,7 @@ export class AuthService {
         });
       }
 
-      const tokenPayload = { email: user.email, sub: user.id };
-      const token = this.jwtService.sign(tokenPayload);
+      const token = await this.createSessionAndToken(user.id, user.email);
 
       return {
         user: {

@@ -13,6 +13,7 @@ import { detectSearchSection } from "@/lib/search/search-config";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useLoginModalStore } from "@/lib/stores/login-modal-store";
 import { useRegisterModalStore } from "@/lib/stores/register-modal-store";
+import { authApi } from "@/lib/api/auth";
 
 /** Header compacto para páginas de listado/detalle (sin nav expandible) */
 const isListingPage = (path: string) => 
@@ -336,7 +337,7 @@ const Header = () => {
                                                     <Link href="/users/profile" className="block px-4 py-3 text-sm font-medium text-secondary hover:bg-gray-50" onClick={() => setUserMenuOpen(false)}>Perfil</Link>
                                                     <Link href="/my-bookings" className="block px-4 py-3 text-sm font-medium text-secondary hover:bg-gray-50" onClick={() => setUserMenuOpen(false)}>Mis reservas</Link>
                                                     <Link href="/my-reviews" className="block px-4 py-3 text-sm font-medium text-secondary hover:bg-gray-50" onClick={() => setUserMenuOpen(false)}>Mis reseñas</Link>
-                                                    <button type="button" onClick={() => { logout(); setUserMenuOpen(false); }} className="block w-full text-left px-4 py-3 text-sm font-medium text-red-600 hover:bg-gray-50">
+                                                    <button type="button" onClick={() => { authApi.logout().catch(() => {}); logout(); setUserMenuOpen(false); }} className="block w-full text-left px-4 py-3 text-sm font-medium text-red-600 hover:bg-gray-50">
                                                         Cerrar sesión
                                                     </button>
                                                 </>

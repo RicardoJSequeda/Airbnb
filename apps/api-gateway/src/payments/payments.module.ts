@@ -15,5 +15,6 @@ import { PrismaService } from '../common/prisma.service';
     PrismaService,
     SubscriptionGuard,
   ],
+  exports: [PaymentsService],
 })
 export class PaymentsModule {}

@@ -242,7 +242,14 @@ export class PrismaBookingsRepository implements IBookingsRepository {
       /* eslint-disable @typescript-eslint/no-unsafe-assignment -- Prisma transaction tx can be extended client */
       await tx.booking.update({
         where: { id },
-        data: { status: status as Prisma.BookingStatus },
+        data: {
+          status: status as
+            | 'PENDING'
+            | 'CONFIRMED'
+            | 'CANCELLED'
+            | 'COMPLETED'
+            | 'REFUNDED',
+        },
       });
 
       await tx.bookingSummary.updateMany({
@@ -253,10 +260,9 @@ export class PrismaBookingsRepository implements IBookingsRepository {
       const outboxEvents = events ?? [];
       if (outboxEvents.length > 0) {
         if ('outboxEvent' in tx && tx.outboxEvent?.createMany) {
-          /* eslint-disable-next-line @typescript-eslint/unbound-method -- delegate method invoked with correct context via cast */
           const createManyFn = tx.outboxEvent.createMany;
           await (
-            createManyFn as (arg: {
+            createManyFn as unknown as (arg: {
               data: Array<{
                 aggregateId: string;
                 type: string;
@@ -358,19 +364,23 @@ export class PrismaBookingsRepository implements IBookingsRepository {
     return list.map((b) => this.toSnapshot(b));
   }
 
-  private toSnapshot(b: {
-    id: string;
-    propertyId: string;
-    guestId: string;
-    organizationId: string;
-    checkIn: Date;
-    checkOut: Date;
-    totalPrice: number | Prisma.Decimal;
-    status: string;
-    property?: BookingSnapshot['property'];
-    guest?: BookingSnapshot['guest'];
-    payment?: BookingSnapshot['payment'];
-  }): BookingSnapshot {
+  private toSnapshot(
+    b: {
+      id: string;
+      propertyId: string;
+      guestId: string;
+      organizationId: string;
+      checkIn: Date;
+      checkOut: Date;
+      totalPrice: number | Prisma.Decimal;
+      status: string;
+      property?:
+        | (Partial<NonNullable<BookingSnapshot['property']>> & { id: string })
+        | null;
+      guest?: BookingSnapshot['guest'];
+      payment?: BookingSnapshot['payment'] | null;
+    },
+  ): BookingSnapshot {
     return {
       id: b.id,
       propertyId: b.propertyId,
@@ -380,9 +390,19 @@ export class PrismaBookingsRepository implements IBookingsRepository {
       checkOut: b.checkOut,
       totalPrice: Number(b.totalPrice),
       status: b.status,
-      property: b.property,
+      property: b.property
+        ? {
+            id: b.property.id,
+            hostId: 'hostId' in b.property ? (b.property.hostId as string) : '',
+            title: b.property.title,
+            images: b.property.images,
+            city: b.property.city,
+            country: b.property.country,
+            host: b.property.host,
+          }
+        : undefined,
       guest: b.guest,
-      payment: b.payment,
+      payment: b.payment ?? undefined,
     };
   }
 }

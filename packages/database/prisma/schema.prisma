@@ -190,10 +190,28 @@ model User {
   experiences        Experience[]        @relation("HostExperiences")
   experienceBookings ExperienceBooking[] @relation("GuestExperienceBookings")
   experienceReviews  ExperienceReview[]  @relation("GuestExperienceReviews")
+  sessions          Session[]
 
   @@index([supabaseId])
   @@index([organizationId])
   @@map("users")
+  @@schema("users")
+}
+
+// Sesiones de usuario (login desde cualquier dispositivo). Cada token JWT tiene un jti que se guarda aquí.
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jti       String   @unique // JWT ID: único por token, para validar y poder cerrar sesión
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?  @db.VarChar(500)
+
+  @@index([userId])
+  @@index([jti])
+  @@index([expiresAt])
+  @@map("sessions")
   @@schema("users")
 }
 
