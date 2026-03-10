@@ -27,14 +27,19 @@ function CheckoutSuccessContent() {
             router.replace('/my-bookings')
           })
           .catch(() => {
-            sessionStorage.removeItem(CHECKOUT_DATA_KEY)
-            router.replace('/my-bookings')
+            router.replace('/checkout/failure?reason=failed')
           })
       } else {
         router.replace('/my-bookings')
       }
     } else {
-      router.replace('/my-bookings')
+      const reason =
+        redirectStatus === 'failed' || redirectStatus === 'requires_payment_method'
+          ? 'failed'
+          : redirectStatus === 'canceled'
+            ? 'canceled'
+            : 'unknown'
+      router.replace(`/checkout/failure?reason=${encodeURIComponent(reason)}`)
     }
   }, [router, searchParams])
 

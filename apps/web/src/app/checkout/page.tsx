@@ -60,13 +60,23 @@ function CheckoutForm() {
           {error}
         </div>
       )}
-      <button
-        type="submit"
-        disabled={!stripe || !elements || submitting}
-        className="w-full py-3 px-4 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-      >
-        {submitting ? 'Procesando...' : 'Pagar'}
-      </button>
+      <div className="flex flex-col gap-3">
+        <button
+          type="submit"
+          disabled={!stripe || !elements || submitting}
+          className="w-full py-3 px-4 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+        >
+          {submitting ? 'Procesando...' : 'Pagar'}
+        </button>
+        <button
+          type="button"
+          disabled={submitting}
+          onClick={() => router.back()}
+          className="w-full py-3 px-4 border border-gray-300 text-secondary font-semibold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          Cancelar y volver
+        </button>
+      </div>
     </form>
   )
 }
