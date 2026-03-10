@@ -73,7 +73,7 @@ function BookPropertyContent() {
       return
     }
 
-    if (!result.clientSecret || !result.paymentIntentId || !result.booking?.id) {
+    if (!result.clientSecret || !result.paymentIntentId || !result.bookingId) {
       setError('Respuesta incompleta del servidor')
       setSubmitting(false)
       return
@@ -82,7 +82,7 @@ function BookPropertyContent() {
     sessionStorage.setItem(
       CHECKOUT_DATA_KEY,
       JSON.stringify({
-        bookingId: result.booking.id,
+        bookingId: result.bookingId,
         clientSecret: result.clientSecret,
         paymentIntentId: result.paymentIntentId,
       }),

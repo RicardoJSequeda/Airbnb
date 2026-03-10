@@ -1,8 +1,12 @@
 import { apiClient } from './client'
-import { Booking } from '@/types'
+import type { Booking } from '@/types'
 
 export interface CreateBookingResponse {
-  booking: Booking
+  bookingId: string
+  status: string
+  totalPrice: number
+  checkIn: string
+  checkOut: string
   clientSecret: string
   paymentIntentId: string
 }

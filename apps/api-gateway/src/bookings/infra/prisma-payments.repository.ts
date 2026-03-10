@@ -3,7 +3,7 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { PrismaPaymentsClient } from '../../contexts/payments/infrastructure/prisma-payments.client';
+import { PrismaService } from '../../common/prisma.service';
 import type {
   IPaymentsRepository,
   PaymentSnapshot,
@@ -12,7 +12,7 @@ import type {
 
 @Injectable()
 export class PrismaPaymentsRepository implements IPaymentsRepository {
-  constructor(private readonly prisma: PrismaPaymentsClient) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findByBookingId(bookingId: string): Promise<PaymentSnapshot | null> {
     const p = await this.prisma.payment.findUnique({

@@ -17,16 +17,13 @@ import { PrismaBookingsQueryRepository } from './infra/prisma-bookings-query.rep
 import { GetBookingDetailsQuery } from './application/queries/get-booking-details.query';
 import { GetBookingsByGuestQuery } from './application/queries/get-bookings-by-guest.query';
 import { GetBookingsByHostQuery } from './application/queries/get-bookings-by-host.query';
-import { PrismaBookingsClient } from '../contexts/bookings/infrastructure/prisma-bookings.client';
-import { PrismaPaymentsClient } from '../contexts/payments/infrastructure/prisma-payments.client';
 import { PrismaService } from '../common/prisma.service';
 
 @Module({
   imports: [ConfigModule],
   controllers: [BookingsController],
   providers: [
-    PrismaBookingsClient,
-    PrismaPaymentsClient,
+    PrismaService,
     StripeService,
     RedisService,
     {

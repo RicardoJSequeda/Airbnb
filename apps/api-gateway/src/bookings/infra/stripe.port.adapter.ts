@@ -3,9 +3,11 @@
  * La capa de aplicación no importa Stripe SDK.
  */
 
+import { Injectable } from '@nestjs/common';
 import type { IStripePort } from '../domain/ports/stripe.port';
 import { StripeService } from '../../payments/stripe.service';
 
+@Injectable()
 export class StripePortAdapter implements IStripePort {
   constructor(private readonly stripeService: StripeService) {}
 

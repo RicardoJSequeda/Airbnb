@@ -3,9 +3,11 @@
  * La capa de aplicación no importa cliente Redis.
  */
 
+import { Injectable } from '@nestjs/common';
 import type { IRedisPort } from '../domain/ports/redis.port';
 import { RedisService } from '../../common/redis.service';
 
+@Injectable()
 export class RedisPortAdapter implements IRedisPort {
   constructor(private readonly redisService: RedisService) {}
 

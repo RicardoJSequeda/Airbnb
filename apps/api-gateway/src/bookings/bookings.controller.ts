@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { CreateExperienceBookingDto } from './dto/create-experience-booking.dto';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { OrganizationGuard } from '../common/guards/organization.guard';
 import { SubscriptionGuard } from '../common/guards/subscription.guard';
@@ -32,6 +33,19 @@ export class BookingsController {
   ) {
     return this.bookingsService.create(
       createBookingDto,
+      req.user.userId,
+      req.user.organizationId ?? '',
+    );
+  }
+
+  @Post('experience')
+  @RequireIdempotency()
+  createExperience(
+    @Body() dto: CreateExperienceBookingDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.bookingsService.createExperience(
+      dto,
       req.user.userId,
       req.user.organizationId ?? '',
     );

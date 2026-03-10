@@ -98,6 +98,21 @@ export class ConfirmBookingUseCase {
       feePercentage,
     );
 
+    const payment = await this.paymentsRepository.findByBookingId(
+      input.bookingId,
+    );
+    if (payment?.stripePaymentIntentId) {
+      await this.stripePort.capturePaymentIntent(
+        payment.stripePaymentIntentId,
+      );
+      await this.paymentsRepository.updateStatus(input.bookingId, {
+        status: 'COMPLETED',
+        paidAt: new Date(),
+        platformFeeAmount: platformFee,
+        hostNetAmount: hostNet,
+      });
+    }
+
     await this.bookingsRepository.updateBookingStatus(
       input.bookingId,
       aggregate.status,

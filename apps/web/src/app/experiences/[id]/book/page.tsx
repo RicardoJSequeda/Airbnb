@@ -8,11 +8,11 @@ import { ChevronLeft, CreditCard } from 'lucide-react'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import { publicExperiencesApi } from '@/lib/api/experiences'
-import { bookingsApi } from '@/lib/api/bookings'
 import { parseErrorMessage } from '@/lib/utils/parse-error'
 import type { Experience } from '@/types/experience'
 import { format, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useCreateExperienceBooking } from '@/features/bookings/hooks'
 
 const CHECKOUT_DATA_KEY = 'checkout_booking_data'
 
@@ -66,6 +66,7 @@ function ExperienceBookContent() {
   const [pseFormOpen, setPseFormOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
+  const { createExperienceBooking, error: createBookingError } = useCreateExperienceBooking()
 
   useEffect(() => {
     if (!id) return
@@ -136,16 +137,16 @@ function ExperienceBookContent() {
     setSubmitting(true)
     try {
       const date = dateParam ?? (selectedSlot ? format(addDays(new Date(), 1), 'yyyy-MM-dd') : '')
-      const result = await bookingsApi.createExperienceBooking({
+      const result = await createExperienceBooking({
         experienceId: id,
         slotId: (slotId || selectedSlot?.id) ?? '',
         date,
         adults,
         children,
       })
-      const bookingId = (result as { booking?: { id: string }; bookingId?: string }).booking?.id ?? (result as { bookingId?: string }).bookingId
+      const bookingId = result?.bookingId
       if (!bookingId || !result.clientSecret || !result.paymentIntentId) {
-        setPayError('Respuesta incompleta del servidor')
+        setPayError(createBookingError ?? 'Respuesta incompleta del servidor')
         setSubmitting(false)
         return
       }

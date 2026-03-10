@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { Public } from '../common/decorators/public.decorator';
-import { PrismaBookingsClient } from '../contexts/bookings/infrastructure/prisma-bookings.client';
+import { PrismaService } from '../common/prisma.service';
 
 /**
  * GET /api/public/diagnostic
@@ -8,7 +8,7 @@ import { PrismaBookingsClient } from '../contexts/bookings/infrastructure/prisma
  */
 @Controller('public')
 export class DiagnosticController {
-  constructor(private readonly prisma: PrismaBookingsClient) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   @Get('diagnostic')
   @Public()

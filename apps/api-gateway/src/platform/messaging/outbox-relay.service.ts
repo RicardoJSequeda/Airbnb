@@ -118,7 +118,7 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
   ): Promise<OutboxEventRecord[]> {
     const rows = await this.prismaOutbox.$queryRawUnsafe<{ id: string }[]>(
       `SELECT id
-       FROM bookings.outbox_events
+       FROM platform.outbox_events
        WHERE "processedAt" IS NULL
          AND "deadLetteredAt" IS NULL
          AND "retryCount" < $1
@@ -252,20 +252,20 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
   private async refreshOperationalGauges(): Promise<void> {
     const pendingRows = await this.prismaOutbox.$queryRawUnsafe<{ total: number }[]>(
       `SELECT COUNT(*)::int AS total
-       FROM bookings.outbox_events
+       FROM platform.outbox_events
        WHERE "processedAt" IS NULL
          AND "deadLetteredAt" IS NULL`,
     );
 
     const deadLetterRows = await this.prismaOutbox.$queryRawUnsafe<{ total: number }[]>(
       `SELECT COUNT(*)::int AS total
-       FROM bookings.outbox_events
+       FROM platform.outbox_events
        WHERE "deadLetteredAt" IS NOT NULL`,
     );
 
     const oldestPendingRows = await this.prismaOutbox.$queryRawUnsafe<{ seconds: number | null }[]>(
       `SELECT EXTRACT(EPOCH FROM (NOW() - MIN("createdAt")))::float AS seconds
-       FROM bookings.outbox_events
+       FROM platform.outbox_events
        WHERE "processedAt" IS NULL
          AND "deadLetteredAt" IS NULL`,
     );

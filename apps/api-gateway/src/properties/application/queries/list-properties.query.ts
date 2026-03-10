@@ -1,0 +1,45 @@
+/**
+ * Query: listar propiedades (dashboard).
+ */
+
+import { Inject, Injectable } from '@nestjs/common';
+import type { IPropertiesRepository } from '../../domain/ports/properties.repository';
+import type { ListPropertiesFilters } from '../../domain/ports/properties.repository';
+import { RedisService } from '../../../common/redis.service';
+
+const CACHE_TTL = 60;
+
+@Injectable()
+export class ListPropertiesQuery {
+  constructor(
+    @Inject('IPropertiesRepository')
+    private readonly repository: IPropertiesRepository,
+    private readonly redis: RedisService,
+  ) {}
+
+  async execute(
+    filters?: ListPropertiesFilters,
+  ): Promise<Record<string, unknown>[]> {
+    const orgId = filters?.organizationId ?? '';
+    const cacheKey = `properties:list:${orgId}:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.propertyType ?? ''}`;
+
+    if (this.redis.isAvailable()) {
+      const cached = await this.redis.get(cacheKey);
+      if (cached) {
+        try {
+          return JSON.parse(cached) as Record<string, unknown>[];
+        } catch {
+          /* invalid cache */
+        }
+      }
+    }
+
+    const result = await this.repository.findMany(filters ?? {});
+
+    if (this.redis.isAvailable()) {
+      await this.redis.set(cacheKey, JSON.stringify(result), CACHE_TTL);
+    }
+
+    return result;
+  }
+}

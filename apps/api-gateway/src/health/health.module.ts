@@ -2,8 +2,7 @@ import { Module } from '@nestjs/common';
 import { HealthController } from './health.controller';
 import { HealthService } from './health.service';
 import { DiagnosticController } from './diagnostic.controller';
-import { PrismaBookingsClient } from '../contexts/bookings/infrastructure/prisma-bookings.client';
-import { PrismaPaymentsClient } from '../contexts/payments/infrastructure/prisma-payments.client';
+import { PrismaService } from '../common/prisma.service';
 import { PrismaOutboxClient } from '../platform/messaging/infrastructure/prisma-outbox.client';
 import { RedisService } from '../common/redis.service';
 import { KafkaPublisherService } from '../platform/messaging/kafka.publisher.service';
@@ -15,8 +14,7 @@ import { TraceContextService } from '../platform/observability/trace-context.ser
   controllers: [HealthController, DiagnosticController],
   providers: [
     HealthService,
-    PrismaBookingsClient,
-    PrismaPaymentsClient,
+    PrismaService,
     PrismaOutboxClient,
     RedisService,
     KafkaPublisherService,

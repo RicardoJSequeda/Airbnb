@@ -16,7 +16,7 @@ function CheckoutSuccessContent() {
     const paymentIntent = searchParams.get('payment_intent')
     const redirectStatus = searchParams.get('redirect_status')
 
-    if (redirectStatus === 'succeeded' && paymentIntent) {
+    if ((redirectStatus === 'succeeded' || redirectStatus === 'requires_capture') && paymentIntent) {
       const raw = sessionStorage.getItem(CHECKOUT_DATA_KEY)
       if (raw) {
         const { bookingId } = JSON.parse(raw) as { bookingId: string }

@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaBookingsClient } from '../contexts/bookings/infrastructure/prisma-bookings.client';
-import { PrismaPaymentsClient } from '../contexts/payments/infrastructure/prisma-payments.client';
+import { PrismaService } from '../common/prisma.service';
 import { PrismaOutboxClient } from '../platform/messaging/infrastructure/prisma-outbox.client';
 import { RedisService } from '../common/redis.service';
 import { KafkaPublisherService } from '../platform/messaging/kafka.publisher.service';
@@ -8,10 +7,8 @@ import { KafkaPublisherService } from '../platform/messaging/kafka.publisher.ser
 @Injectable()
 export class HealthService {
   constructor(
-    private readonly bookingsDb: PrismaBookingsClient,
-    private readonly paymentsDb: PrismaPaymentsClient,
+    private readonly prisma: PrismaService,
     private readonly usersDb: PrismaOutboxClient,
-    private readonly listingsDb: PrismaBookingsClient,
     private readonly redis: RedisService,
     private readonly kafka: KafkaPublisherService,
   ) {}
@@ -19,10 +16,10 @@ export class HealthService {
   async health() {
     const [bookings, payments, users, listings, kafka, redis] =
       await Promise.all([
-        this.pingDb(this.bookingsDb),
-        this.pingDb(this.paymentsDb),
+        this.pingDb(this.prisma),
+        this.pingDb(this.prisma),
         this.pingDb(this.usersDb),
-        this.pingDb(this.listingsDb),
+        this.pingDb(this.prisma),
         this.kafka.checkHealth(),
         this.pingRedis(),
       ]);

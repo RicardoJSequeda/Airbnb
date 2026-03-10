@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaPaymentsClient } from '../contexts/payments/infrastructure/prisma-payments.client';
+import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
 import { StripeService } from './stripe.service';
 import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
@@ -17,7 +17,7 @@ const holdKey = (bookingId: string) => `booking:hold:${bookingId}`;
 @Injectable()
 export class PaymentsService {
   constructor(
-    private prisma: PrismaPaymentsClient,
+    private prisma: PrismaService,
     private redis: RedisService,
     private stripeService: StripeService,
     private configService: ConfigService,
@@ -152,6 +152,11 @@ export class PaymentsService {
         });
         return { payment: current!, didTransition: false };
       }
+
+      await tx.paymentSummary.updateMany({
+        where: { bookingId },
+        data: { status: 'COMPLETED' },
+      });
 
       await tx.booking.update({
         where: { id: bookingId },
@@ -332,6 +337,9 @@ export class PaymentsService {
       case 'payment_intent.payment_failed':
         await this.handlePaymentFailed(event.data.object as { id: string });
         break;
+      case 'payment_intent.canceled':
+        await this.handlePaymentCanceled(event.data.object as { id: string });
+        break;
       case 'charge.refunded':
         await this.handleRefund(
           event.data.object as { payment_intent: string },
@@ -402,18 +410,44 @@ export class PaymentsService {
   }
 
   private async handlePaymentFailed(paymentIntent: { id: string }) {
-    const payment = await this.prisma.payment.findFirst({
-      where: { stripePaymentIntentId: paymentIntent.id },
-    });
+    await this.handlePaymentFailureOrCancel(paymentIntent.id, 'FAILED');
+  }
 
-    if (payment) {
-      await this.prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: 'FAILED',
-        },
+  private async handlePaymentCanceled(paymentIntent: { id: string }) {
+    await this.handlePaymentFailureOrCancel(paymentIntent.id, 'CANCELLED');
+  }
+
+  private async handlePaymentFailureOrCancel(
+    paymentIntentId: string,
+    failureStatus: 'FAILED' | 'CANCELLED',
+  ) {
+    await this.prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.findFirst({
+        where: { stripePaymentIntentId: paymentIntentId },
       });
-    }
+
+      if (!payment) return;
+
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: { status: failureStatus },
+      });
+
+      await tx.paymentSummary.updateMany({
+        where: { bookingId: payment.bookingId },
+        data: { status: failureStatus },
+      });
+
+      await tx.booking.updateMany({
+        where: { id: payment.bookingId },
+        data: { status: 'CANCELLED' },
+      });
+
+      await tx.bookingSummary.updateMany({
+        where: { bookingId: payment.bookingId },
+        data: { status: 'CANCELLED' },
+      });
+    });
   }
 
   private async handleRefund(charge: { payment_intent: string }) {

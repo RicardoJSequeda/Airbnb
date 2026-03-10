@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaBookingsClient } from '../../contexts/bookings/infrastructure/prisma-bookings.client';
+import { PrismaService } from '../../common/prisma.service';
 import type {
   IBookingsRepository,
   PropertySnapshot,
@@ -22,7 +22,7 @@ const HOLD_KEY_PREFIX = 'booking:hold:';
 @Injectable()
 export class PrismaBookingsRepository implements IBookingsRepository {
   constructor(
-    private readonly prisma: PrismaBookingsClient,
+    private readonly prisma: PrismaService,
     @Inject('IRedisPort') private readonly redisPort: IRedisPort,
   ) {}
 
@@ -246,6 +246,7 @@ export class PrismaBookingsRepository implements IBookingsRepository {
           status: status as
             | 'PENDING'
             | 'CONFIRMED'
+            | 'REJECTED'
             | 'CANCELLED'
             | 'COMPLETED'
             | 'REFUNDED',

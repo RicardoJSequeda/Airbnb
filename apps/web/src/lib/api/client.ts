@@ -8,14 +8,24 @@ export const apiClient = axios.create({
   },
 })
 
+function getStoredToken(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem('auth-storage')
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { state?: { token?: string | null } }
+    return parsed?.state?.token ?? null
+  } catch {
+    return null
+  }
+}
+
 // Request interceptor para agregar el token
 apiClient.interceptors.request.use(
   (config) => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token')
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`
-      }
+    const token = getStoredToken()
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
@@ -31,8 +41,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       const path = window.location.pathname
       if (path !== '/login' && path !== '/register') {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
+        localStorage.removeItem('auth-storage')
         const redirect = encodeURIComponent(path + window.location.search)
         window.location.href = redirect ? `/login?redirect=${redirect}` : '/login'
       }

@@ -88,6 +88,18 @@ export class CancelBookingUseCase {
       throw err;
     }
 
+    const payment = await this.paymentsRepository.findByBookingId(
+      input.bookingId,
+    );
+    if (payment?.stripePaymentIntentId) {
+      await this.stripePort.cancelPaymentIntent(
+        payment.stripePaymentIntentId,
+      );
+      await this.paymentsRepository.updateStatus(input.bookingId, {
+        status: 'REFUNDED',
+      });
+    }
+
     await this.bookingsRepository.deleteHold(input.bookingId);
 
     await this.bookingsRepository.updateBookingStatus(

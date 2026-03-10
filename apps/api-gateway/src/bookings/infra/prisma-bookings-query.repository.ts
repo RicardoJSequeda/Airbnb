@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaBookingsClient } from '../../contexts/bookings/infrastructure/prisma-bookings.client';
+import { PrismaService } from '../../common/prisma.service';
 import type { IBookingsQueryRepository } from '../domain/ports/bookings-query.repository';
 import type { BookingDetailsReadModel } from '../domain/read-models/booking-details.read-model';
 import type { BookingListByGuestReadModel } from '../domain/read-models/booking-list-by-guest.read-model';
@@ -7,7 +7,7 @@ import type { BookingListByHostReadModel } from '../domain/read-models/booking-l
 
 @Injectable()
 export class PrismaBookingsQueryRepository implements IBookingsQueryRepository {
-  constructor(private readonly prisma: PrismaBookingsClient) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findBookingDetails(
     bookingId: string,

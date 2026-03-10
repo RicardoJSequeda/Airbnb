@@ -68,7 +68,7 @@ export interface Payment {
   amount: number
   currency: string
   stripePaymentIntentId: string
-  status: 'PENDING' | 'PROCESSING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED'
+  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'CANCELLED'
   createdAt: string
   updatedAt: string
 }

@@ -17,7 +17,7 @@ export interface SearchConfig {
   section: SearchSection
   fields: SearchFieldConfig[]
   searchRoute: string
-  searchParamsBuilder: (values: Record<string, unknown>) => URLSearchParams
+  searchParamsBuilder: (values: Record<string, any>) => URLSearchParams
 }
 
 /** Configuración para Alojamientos */

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaBookingsClient } from '../../contexts/bookings/infrastructure/prisma-bookings.client';
+import { PrismaService } from '../../common/prisma.service';
 import { IBookingsReadRepository } from '../domain/booking.domain';
 
 /**
@@ -8,7 +8,7 @@ import { IBookingsReadRepository } from '../domain/booking.domain';
  */
 @Injectable()
 export class PrismaBookingsReadRepository implements IBookingsReadRepository {
-  constructor(private readonly prisma: PrismaBookingsClient) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAllByGuest(
     guestId: string,
