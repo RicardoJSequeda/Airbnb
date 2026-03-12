@@ -1,5 +1,7 @@
 'use client'
 
+import { Suspense } from "react";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -31,7 +33,7 @@ const isMinimalHeaderPage = (path: string) => {
   return p.startsWith('/users/profile') || p === '/my-bookings' || p === '/my-reviews' || p.startsWith('/help') || p.startsWith('/invite') || p.startsWith('/cohost');
 };
 
-const Header = () => {
+const HeaderContent = () => {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const compactMode = isListingPage(pathname ?? '');
@@ -402,6 +404,14 @@ const Header = () => {
                 redirect={registerRedirect}
             />
         </>
+    );
+}
+
+function Header() {
+    return (
+        <Suspense fallback={null}>
+            <HeaderContent />
+        </Suspense>
     );
 }
 
