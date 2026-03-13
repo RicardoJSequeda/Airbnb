@@ -40,16 +40,16 @@ export function ProfileSidebar({ title = 'Perfil', items = defaultNavItems }: Pr
           if (item.iconType === 'avatar') {
             const initial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
             iconContent = user?.avatar ? (
-              <img src={user.avatar} alt="Avatar" className="w-[32px] h-[32px] rounded-full object-cover" />
+              <img src={user.avatar} alt="Avatar" className="w-[40px] h-[40px] rounded-full object-cover" />
             ) : (
-              <div className="w-[32px] h-[32px] rounded-full bg-neutral-900 text-white flex items-center justify-center text-[14px] font-semibold">
+              <div className="w-[40px] h-[40px] rounded-full bg-neutral-900 text-white flex items-center justify-center text-[16px] font-semibold">
                 {initial}
               </div>
             )
           } else if (item.iconType === 'maleta') {
-             iconContent = <Image src="/icons/maleta.avif" alt="Maleta" width={32} height={32} className="object-contain" />
+             iconContent = <Image src="/icons/maleta.avif" alt="Maleta" width={40} height={40} className="object-contain" />
           } else if (item.iconType === 'familia') {
-             iconContent = <Image src="/icons/familia.avif" alt="Familia" width={32} height={32} className="object-contain" />
+             iconContent = <Image src="/icons/familia.avif" alt="Familia" width={40} height={40} className="object-contain" />
           }
 
           return (
@@ -57,13 +57,13 @@ export function ProfileSidebar({ title = 'Perfil', items = defaultNavItems }: Pr
               key={item.href}
               href={item.href}
               prefetch
-              className={`flex items-center gap-4 px-4 py-3 rounded-2xl text-[15px] font-medium transition-colors duration-150 ${
+              className={`flex items-center gap-4 px-4 py-4 rounded-2xl text-[15px] font-medium transition-colors duration-150 ${
                 isActive
                   ? 'bg-neutral-100/80 text-neutral-900'
                   : 'text-neutral-700 hover:bg-neutral-100/50'
               }`}
             >
-              <div className="flex items-center justify-center w-[32px] h-[32px] flex-shrink-0">
+              <div className="flex items-center justify-center w-[40px] h-[40px] flex-shrink-0">
                 {iconContent}
               </div>
               {item.label}
