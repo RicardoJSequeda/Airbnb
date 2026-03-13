@@ -5,6 +5,7 @@ import {
   Activity,
   Binoculars,
   BookOpen,
+  Briefcase,
   Building,
   Camera,
   ChefHat,

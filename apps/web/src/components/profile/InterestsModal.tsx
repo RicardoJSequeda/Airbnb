@@ -65,16 +65,20 @@ export function InterestsModal({
   const [selectedLabels, setSelectedLabels] = React.useState<string[]>([])
   const [isSaving, setIsSaving] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(true)
+  const [errorVisible, setErrorVisible] = React.useState(false)
 
   React.useEffect(() => {
     if (isOpen) {
       const fetchInterests = async () => {
         try {
           setIsLoading(true)
+          setErrorVisible(false)
           const response = await apiClient.get<Interest[]>('/interests')
           setInterests(response.data)
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error fetching interests:', error)
+          setErrorVisible(true)
+          // Avoid notification spam if it's already visible
         } finally {
           setIsLoading(false)
         }
@@ -132,6 +136,28 @@ export function InterestsModal({
           {isLoading ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-neutral-800" />
+            </div>
+          ) : errorVisible ? (
+            <div className="text-center py-8 px-4">
+              <p className="text-[13px] text-neutral-500 mb-4">
+                No pudimos cargar los intereses.
+              </p>
+              <button 
+                onClick={() => {
+                  setErrorVisible(false)
+                  setIsLoading(true)
+                  apiClient.get<Interest[]>('/interests').then(res => {
+                    setInterests(res.data)
+                    setIsLoading(false)
+                  }).catch(() => {
+                    setErrorVisible(true)
+                    setIsLoading(false)
+                  })
+                }}
+                className="text-[13px] font-semibold underline text-neutral-900"
+              >
+                Reintentar
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">

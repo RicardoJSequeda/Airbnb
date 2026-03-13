@@ -9,6 +9,8 @@ import { MetricsService } from './observability/metrics.service';
 import { MetricsController } from './observability/metrics.controller';
 import { TraceContextService } from './observability/trace-context.service';
 import { InterestsController } from './interests.controller';
+import { InterestsService } from './interests.service';
+import { PrismaService } from '../common/prisma.service';
 
 @Global()
 @Module({
@@ -22,6 +24,8 @@ import { InterestsController } from './interests.controller';
     ExternalAdapterResilienceService,
     MetricsService,
     TraceContextService,
+    InterestsService,
+    PrismaService
   ],
   exports: [
     KafkaModule,
@@ -32,6 +36,7 @@ import { InterestsController } from './interests.controller';
     ExternalAdapterResilienceService,
     MetricsService,
     TraceContextService,
+    InterestsService
   ],
 })
 export class PlatformModule {}
