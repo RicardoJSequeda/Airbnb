@@ -73,14 +73,14 @@ export default function MyReviewsPage() {
     <div className="min-h-screen">
       <Header />
 
-      <main className="max-w-[1032px] mx-auto px-6 py-8">
-        <div className="mb-8 flex items-center text-[13px] text-neutral-500 font-medium">
-          <Link href="/profile" className="hover:underline text-[#222222]">Perfil</Link>
-          <ChevronRight className="w-[14px] h-[14px] mx-1" strokeWidth={2} />
+      <main className="max-w-[1032px] mx-auto px-6 pt-10 pb-16">
+        <div className="mb-10 mt-4 flex items-center text-[13px] font-medium text-[#717171]">
+          <Link href="/users/profile" className="hover:underline text-[#222222]">Perfil</Link>
+          <ChevronRight className="w-[14px] h-[14px] mx-2" strokeWidth={1.5} />
           <span>Reseñas</span>
         </div>
 
-        <h1 className="text-3xl font-semibold text-[#222222] mb-10">
+        <h1 className="text-[32px] font-semibold text-[#222222] mb-12">
           {activeTab === 'about_you' ? 'Reseñas sobre ti' : 'Reseñas que escribiste'}
         </h1>
 
