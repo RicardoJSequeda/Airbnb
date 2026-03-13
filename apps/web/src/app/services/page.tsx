@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
@@ -26,7 +27,7 @@ const SERVICE_TO_EXPERIENCE_CATEGORY: Record<string, string> = {
 const CONTAINER_CLASS =
   'w-full max-w-[1824px] mx-auto px-6 md:px-10 lg:px-12'
 
-export default function ServicesPage() {
+function ServicesPageContent() {
   const searchParams = useSearchParams()
 
   const city = searchParams.get('city') ?? 'Bogotá'
@@ -156,5 +157,26 @@ export default function ServicesPage() {
 
       <Footer />
     </main>
+  )
+}
+
+export default function ServicesPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-white">
+        <Header />
+        <div className="h-20" />
+        <section className="bg-[#F7F7F7] pb-10">
+          <div className="max-w-[1824px] mx-auto px-6 md:px-10 lg:px-12 py-12">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-64" />
+            </div>
+          </div>
+        </section>
+        <Footer />
+      </main>
+    }>
+      <ServicesPageContent />
+    </Suspense>
   )
 }
