@@ -12,11 +12,45 @@ import { StandOutStep } from '@/components/host-accommodation/StandOutStep'
 import { IntroStep } from '@/components/host-accommodation/IntroStep'
 import { LocationStep } from '@/components/host-accommodation/LocationStep'
 import { PropertyTypeStep } from '@/components/host-accommodation/PropertyTypeStep'
-import type { AccommodationDraft, AccommodationStepKey } from '@/components/host-accommodation/types'
+import { TitleStep } from '@/components/host-accommodation/TitleStep'
+import { DescriptionStep } from '@/components/host-accommodation/DescriptionStep'
+import { HighlightsStep } from '@/components/host-accommodation/HighlightsStep'
+import { FinishIntroStep } from '@/components/host-accommodation/FinishIntroStep'
+import { ReservationPreferencesStep } from '@/components/host-accommodation/ReservationPreferencesStep'
+import { BasePriceStep } from '@/components/host-accommodation/BasePriceStep'
+import { WeekendPriceStep } from '@/components/host-accommodation/WeekendPriceStep'
+import { DiscountsStep } from '@/components/host-accommodation/DiscountsStep'
+import { SecurityInfoStep } from '@/components/host-accommodation/SecurityInfoStep'
+import { FinalDetailsStep } from '@/components/host-accommodation/FinalDetailsStep'
+import type {
+  AccommodationDraft,
+  AccommodationStepKey,
+} from '@/components/host-accommodation/types'
+import { propertiesApi } from '@/lib/api/properties'
 
-const STEPS: AccommodationStepKey[] = ['intro', 'propertyType', 'guestAccess', 'location', 'basics', 'standOut', 'amenities', 'photos', 'photoArrange']
-/** [fin segmento 1, fin segmento 2]. Segmento 2 = standOut + amenities + photos + photoArrange. */
-const SEGMENT_BOUNDARIES: [number, number] = [5, 9]
+const STEPS: AccommodationStepKey[] = [
+  'intro',
+  'propertyType',
+  'guestAccess',
+  'location',
+  'basics',
+  'standOut',
+  'amenities',
+  'photos',
+  'photoArrange',
+  'title',
+  'description',
+  'highlights',
+  'finishIntro',
+  'reservationPreferences',
+  'basePrice',
+  'weekendPrice',
+  'discounts',
+  'securityInfo',
+  'finalDetails',
+]
+/** [fin segmento 1, fin segmento 2]. Segmento 2 = standOut + amenities + photos + photoArrange + title + description + highlights + finishIntro + precios. */
+const SEGMENT_BOUNDARIES: [number, number] = [5, 17]
 const STORAGE_KEY = 'host-draft-accommodation'
 const DEFAULT_GUESTS = 4
 const DEFAULT_BEDS = 2
@@ -37,6 +71,22 @@ function getInitialDraft(): AccommodationDraft {
       outstandingAmenityIds: [],
       securityElementIds: [],
       photoCount: 0,
+      title: null,
+      description: null,
+      highlights: [],
+      reservationPreference: null,
+      basePrice: null,
+      weekendPremiumPercent: null,
+      discounts: [],
+      hasSecurityCameraOutside: false,
+      hasNoiseMonitor: false,
+      hasWeapons: false,
+      finalCountry: null,
+      finalAddress: '',
+      finalAddressExtra: '',
+      finalCity: '',
+      finalRegion: '',
+      isBusinessHost: null,
     }
   }
 
@@ -55,6 +105,22 @@ function getInitialDraft(): AccommodationDraft {
       outstandingAmenityIds: [],
       securityElementIds: [],
       photoCount: 0,
+      title: null,
+      description: null,
+      highlights: [],
+      reservationPreference: null,
+      basePrice: null,
+      weekendPremiumPercent: null,
+      discounts: [],
+      hasSecurityCameraOutside: false,
+      hasNoiseMonitor: false,
+      hasWeapons: false,
+      finalCountry: null,
+      finalAddress: '',
+      finalAddressExtra: '',
+      finalCity: '',
+      finalRegion: '',
+      isBusinessHost: null,
     }
   }
 
@@ -88,6 +154,22 @@ function getInitialDraft(): AccommodationDraft {
       outstandingAmenityIds: [],
       securityElementIds: [],
       photoCount: 0,
+      title: null,
+      description: null,
+      highlights: [],
+      reservationPreference: null,
+      basePrice: null,
+      weekendPremiumPercent: null,
+      discounts: [],
+      hasSecurityCameraOutside: false,
+      hasNoiseMonitor: false,
+      hasWeapons: false,
+      finalCountry: null,
+      finalAddress: '',
+      finalAddressExtra: '',
+      finalCity: '',
+      finalRegion: '',
+      isBusinessHost: null,
     }
   }
 }
@@ -112,6 +194,32 @@ export default function HostAlojamientoPage() {
     initialDraft.securityElementIds
   )
   const [photoUrls, setPhotoUrls] = useState<string[]>([])
+  const [title, setTitle] = useState<string>(initialDraft.title ?? '')
+  const [description, setDescription] = useState<string>(initialDraft.description ?? '')
+  const [highlights, setHighlights] = useState<string[]>(initialDraft.highlights ?? [])
+  const [reservationPreference, setReservationPreference] = useState<
+    AccommodationDraft['reservationPreference']
+  >(initialDraft.reservationPreference ?? null)
+  const [basePrice, setBasePrice] = useState<number | null>(initialDraft.basePrice ?? null)
+  const [weekendPremiumPercent, setWeekendPremiumPercent] = useState<number | null>(
+    initialDraft.weekendPremiumPercent ?? 7
+  )
+  const [discounts, setDiscounts] = useState<string[]>(initialDraft.discounts ?? [])
+  const [hasSecurityCameraOutside, setHasSecurityCameraOutside] = useState(
+    initialDraft.hasSecurityCameraOutside ?? false
+  )
+  const [hasNoiseMonitor, setHasNoiseMonitor] = useState(initialDraft.hasNoiseMonitor ?? false)
+  const [hasWeapons, setHasWeapons] = useState(initialDraft.hasWeapons ?? false)
+  const [finalCountry, setFinalCountry] = useState<string>(initialDraft.finalCountry ?? 'Colombia')
+  const [finalAddress, setFinalAddress] = useState<string>(initialDraft.finalAddress ?? '')
+  const [finalAddressExtra, setFinalAddressExtra] = useState<string>(
+    initialDraft.finalAddressExtra ?? ''
+  )
+  const [finalCity, setFinalCity] = useState<string>(initialDraft.finalCity ?? '')
+  const [finalRegion, setFinalRegion] = useState<string>(initialDraft.finalRegion ?? '')
+  const [isBusinessHost, setIsBusinessHost] = useState<boolean | null>(
+    initialDraft.isBusinessHost ?? null
+  )
 
   const currentStep = STEPS[stepIndex]
 
@@ -138,8 +246,29 @@ export default function HostAlojamientoPage() {
     if (currentStep === 'standOut') return true
     if (currentStep === 'amenities') return true
     if (currentStep === 'photos') return photoUrls.length >= 5
+    if (currentStep === 'photoArrange') return photoUrls.length >= 5
+    if (currentStep === 'title') return title.trim().length > 0
+    if (currentStep === 'description') return description.trim().length > 0
+    if (currentStep === 'highlights') return highlights.length > 0
+    if (currentStep === 'finishIntro') return true
+    if (currentStep === 'reservationPreferences') return reservationPreference !== null
+    if (currentStep === 'basePrice') return basePrice !== null
+    if (currentStep === 'weekendPrice') return weekendPremiumPercent !== null
+    if (currentStep === 'discounts') return true
+    if (currentStep === 'securityInfo') return true
+    if (currentStep === 'finalDetails')
+      return Boolean(finalCountry && finalAddress && finalCity && finalRegion && isBusinessHost !== null)
     return false
-  }, [currentStep, propertyTypeId, guestAccessId, address, photoUrls.length])
+  }, [
+    currentStep,
+    propertyTypeId,
+    guestAccessId,
+    address,
+    photoUrls.length,
+    title,
+    description,
+    highlights.length,
+  ])
 
   const handleBack = () => {
     if (stepIndex === 0) {
@@ -170,9 +299,55 @@ export default function HostAlojamientoPage() {
       outstandingAmenityIds,
       securityElementIds,
       photoCount: photoUrls.length,
+      title: title.trim() || null,
+      description: description.trim() || null,
+      highlights,
+      reservationPreference,
+      basePrice,
+      weekendPremiumPercent,
+      discounts,
+      hasSecurityCameraOutside,
+      hasNoiseMonitor,
+      hasWeapons,
+      finalCountry,
+      finalAddress,
+      finalAddressExtra,
+      finalCity,
+      finalRegion,
+      isBusinessHost,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(draft))
-    router.push('/host')
+
+    const safeLatitude = latitude ?? 0
+    const safeLongitude = longitude ?? 0
+    const price = basePrice ?? 0
+
+    propertiesApi
+      .create({
+        title: draft.title || 'Nuevo alojamiento',
+        description: draft.description || 'Alojamiento creado desde el flujo de anfitrión.',
+        price,
+        currency: 'COP',
+        maxGuests: guests,
+        bedrooms: beds,
+        bathrooms,
+        propertyType: propertyTypeId || 'casa',
+        address: draft.address || finalAddress || '',
+        city: finalCity || 'Ciudad',
+        state: finalRegion || undefined,
+        country: finalCountry || 'Colombia',
+        zipCode: undefined,
+        latitude: safeLatitude,
+        longitude: safeLongitude,
+        amenities: [...amenityIds, ...outstandingAmenityIds],
+        images: photoUrls,
+      })
+      .catch(() => {
+        // Si falla la creación, el borrador en localStorage permite reintentar más tarde.
+      })
+      .finally(() => {
+        router.push('/host/listings')
+      })
   }
 
   return (
@@ -229,6 +404,67 @@ export default function HostAlojamientoPage() {
       ) : null}
       {currentStep === 'photoArrange' ? (
         <PhotoArrangeStep photoUrls={photoUrls} onPhotosChange={setPhotoUrls} />
+      ) : null}
+      {currentStep === 'title' ? (
+        <TitleStep title={title} onTitleChange={setTitle} />
+      ) : null}
+      {currentStep === 'description' ? (
+        <DescriptionStep description={description} onDescriptionChange={setDescription} />
+      ) : null}
+      {currentStep === 'highlights' ? (
+        <HighlightsStep selected={highlights} onChange={setHighlights} />
+      ) : null}
+      {currentStep === 'finishIntro' ? (
+        <FinishIntroStep />
+      ) : null}
+      {currentStep === 'reservationPreferences' ? (
+        <ReservationPreferencesStep
+          value={reservationPreference}
+          onChange={setReservationPreference}
+        />
+      ) : null}
+      {currentStep === 'basePrice' ? (
+        <BasePriceStep basePrice={basePrice} onBasePriceChange={setBasePrice} />
+      ) : null}
+      {currentStep === 'weekendPrice' ? (
+        <WeekendPriceStep
+          basePrice={basePrice}
+          weekendPremiumPercent={weekendPremiumPercent ?? 7}
+          onWeekendPremiumChange={setWeekendPremiumPercent}
+        />
+      ) : null}
+      {currentStep === 'discounts' ? (
+        <DiscountsStep selected={discounts} onChange={setDiscounts} />
+      ) : null}
+      {currentStep === 'securityInfo' ? (
+        <SecurityInfoStep
+          hasSecurityCameraOutside={hasSecurityCameraOutside}
+          hasNoiseMonitor={hasNoiseMonitor}
+          hasWeapons={hasWeapons}
+          onChange={(field, value) => {
+            if (field === 'camera') setHasSecurityCameraOutside(value)
+            if (field === 'noise') setHasNoiseMonitor(value)
+            if (field === 'weapons') setHasWeapons(value)
+          }}
+        />
+      ) : null}
+      {currentStep === 'finalDetails' ? (
+        <FinalDetailsStep
+          country={finalCountry}
+          address={finalAddress}
+          addressExtra={finalAddressExtra}
+          city={finalCity}
+          region={finalRegion}
+          isBusinessHost={isBusinessHost}
+          onChange={(field, value) => {
+            if (field === 'country') setFinalCountry(value)
+            if (field === 'address') setFinalAddress(value)
+            if (field === 'addressExtra') setFinalAddressExtra(value)
+            if (field === 'city') setFinalCity(value)
+            if (field === 'region') setFinalRegion(value)
+          }}
+          onBusinessChange={setIsBusinessHost}
+        />
       ) : null}
     </AccommodationFlowLayout>
   )

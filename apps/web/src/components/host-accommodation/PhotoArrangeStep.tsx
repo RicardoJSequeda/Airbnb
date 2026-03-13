@@ -63,7 +63,7 @@ export function PhotoArrangeStep({ photoUrls, onPhotosChange }: PhotoArrangeStep
 
   return (
     <>
-      <section className="max-w-[720px] mx-auto px-4 sm:px-6 py-6">
+      <section className="max-w-[640px] mx-auto px-4 sm:px-6 py-6">
         <div className="flex items-start justify-between gap-4 mb-2">
           <div>
             <h2 className="text-xl sm:text-2xl font-semibold text-[#222222]">
@@ -91,9 +91,15 @@ export function PhotoArrangeStep({ photoUrls, onPhotosChange }: PhotoArrangeStep
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, 0)}
             onDragEnd={handleDragEnd}
-            className={`relative aspect-[16/10] rounded-xl overflow-hidden border border-[#DDDDDD] mb-4 cursor-grab active:cursor-grabbing ${draggedIndex === 0 ? 'opacity-50' : ''}`}
+            className={`relative max-w-[520px] mx-auto aspect-[4/3] rounded-xl overflow-hidden border border-[#DDDDDD] mb-4 cursor-grab active:cursor-grabbing ${
+              draggedIndex === 0 ? 'opacity-50' : ''
+            }`}
           >
-            <img src={coverUrl} alt="Portada" className="w-full h-full object-cover pointer-events-none" />
+            <img
+              src={coverUrl}
+              alt="Portada"
+              className="w-full h-full object-cover pointer-events-none"
+            />
             <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-white/90 text-xs font-medium text-[#222222]">
               Foto de portada
             </span>
@@ -120,7 +126,7 @@ export function PhotoArrangeStep({ photoUrls, onPhotosChange }: PhotoArrangeStep
             </div>
           </div>
         ) : (
-          <div className="aspect-[16/10] rounded-xl border-2 border-dashed border-[#DDDDDD] bg-[#F7F7F7] flex items-center justify-center mb-4">
+          <div className="max-w-[520px] mx-auto aspect-[4/3] rounded-xl border-2 border-dashed border-[#DDDDDD] bg-[#F7F7F7] flex items-center justify-center mb-4">
             <div className="text-center">
               <ImagePlus className="w-12 h-12 text-[#B0B0B0] mx-auto mb-2" />
               <p className="text-sm text-[#717171]">Agrega una foto de portada</p>
@@ -129,7 +135,7 @@ export function PhotoArrangeStep({ photoUrls, onPhotosChange }: PhotoArrangeStep
         )}
 
         {/* Grid de fotos */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="max-w-[520px] mx-auto grid grid-cols-2 gap-2 sm:gap-3">
           {gridUrls.map((url, i) => {
             const idx = i + 1
             return (
