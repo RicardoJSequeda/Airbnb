@@ -4,6 +4,21 @@ export interface User {
   name: string
   role: 'GUEST' | 'HOST' | 'ADMIN'
   avatar?: string
+  occupation?: string
+  bio?: string
+  timeDedication?: string
+  birthDecade?: string
+  favoriteSong?: string
+  curiousFact?: string
+  biographyTitle?: string
+  destination?: string
+  pets?: string
+  whereIStudied?: string
+  uselessSkill?: string
+  love?: string
+  languages?: string
+  showTravelStamps?: boolean
+  interests?: string[]
   organizationId?: string
   createdAt?: string
 }

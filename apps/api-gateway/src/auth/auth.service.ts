@@ -158,6 +158,21 @@ export class AuthService {
         name: true,
         role: true,
         avatar: true,
+        occupation: true,
+        bio: true,
+        timeDedication: true,
+        birthDecade: true,
+        favoriteSong: true,
+        curiousFact: true,
+        biographyTitle: true,
+        destination: true,
+        pets: true,
+        whereIStudied: true,
+        uselessSkill: true,
+        love: true,
+        languages: true,
+        showTravelStamps: true,
+        interests: true,
         organizationId: true,
         organization: { select: { id: true, name: true, slug: true } },
         createdAt: true,
@@ -172,6 +187,37 @@ export class AuthService {
       ...user,
       organization: user.organization ?? undefined,
     };
+  }
+
+  async updateProfile(userId: string, data: any) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        avatar: true,
+        occupation: true,
+        bio: true,
+        timeDedication: true,
+        birthDecade: true,
+        favoriteSong: true,
+        curiousFact: true,
+        biographyTitle: true,
+        destination: true,
+        pets: true,
+        whereIStudied: true,
+        uselessSkill: true,
+        love: true,
+        languages: true,
+        showTravelStamps: true,
+        interests: true,
+        organizationId: true,
+        createdAt: true,
+      },
+    });
   }
 
   /**

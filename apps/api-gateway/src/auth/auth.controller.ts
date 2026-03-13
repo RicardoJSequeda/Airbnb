@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Patch,
   Post,
   Request,
   UseGuards,
@@ -53,6 +54,14 @@ export class AuthController {
     if (req.user.jti) {
       return this.authService.logout(req.user.jti).then(() => ({ success: true }));
     }
-    return { success: true };
+  }
+
+  @Patch('profile')
+  @UseGuards(SupabaseAuthGuard)
+  updateProfile(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: { name?: string; avatar?: string; occupation?: string; bio?: string },
+  ) {
+    return this.authService.updateProfile(req.user.userId, body);
   }
 }
