@@ -139,6 +139,23 @@ function getInitialDraft(): AccommodationDraft {
       outstandingAmenityIds: Array.isArray(parsed.outstandingAmenityIds) ? parsed.outstandingAmenityIds : [],
       securityElementIds: Array.isArray(parsed.securityElementIds) ? parsed.securityElementIds : [],
       photoCount: typeof parsed.photoCount === 'number' ? parsed.photoCount : 0,
+      title: parsed.title ?? null,
+      description: parsed.description ?? null,
+      highlights: Array.isArray(parsed.highlights) ? parsed.highlights : [],
+      reservationPreference: parsed.reservationPreference ?? null,
+      basePrice: typeof parsed.basePrice === 'number' ? parsed.basePrice : null,
+      weekendPremiumPercent:
+        typeof parsed.weekendPremiumPercent === 'number' ? parsed.weekendPremiumPercent : null,
+      discounts: Array.isArray(parsed.discounts) ? parsed.discounts : [],
+      hasSecurityCameraOutside: parsed.hasSecurityCameraOutside ?? false,
+      hasNoiseMonitor: parsed.hasNoiseMonitor ?? false,
+      hasWeapons: parsed.hasWeapons ?? false,
+      finalCountry: parsed.finalCountry ?? null,
+      finalAddress: parsed.finalAddress ?? '',
+      finalAddressExtra: parsed.finalAddressExtra ?? '',
+      finalCity: parsed.finalCity ?? '',
+      finalRegion: parsed.finalRegion ?? '',
+      isBusinessHost: parsed.isBusinessHost ?? null,
     }
   } catch {
     return {
