@@ -60,7 +60,25 @@ export class AuthController {
   @UseGuards(SupabaseAuthGuard)
   updateProfile(
     @Request() req: AuthenticatedRequest,
-    @Body() body: { name?: string; avatar?: string; occupation?: string; bio?: string },
+    @Body() body: { 
+      name?: string; 
+      avatar?: string; 
+      occupation?: string; 
+      bio?: string;
+      interests?: string[];
+      destination?: string;
+      occupation2?: string; // Some fields might have different names in UI
+      biographyTitle?: string;
+      curiousFact?: string;
+      favoriteSong?: string;
+      birthDecade?: string;
+      timeDedication?: string;
+      pets?: string;
+      whereIStudied?: string;
+      uselessSkill?: string;
+      love?: string;
+      languages?: string;
+    },
   ) {
     return this.authService.updateProfile(req.user.userId, body);
   }

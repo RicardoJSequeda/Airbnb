@@ -190,9 +190,23 @@ export class AuthService {
   }
 
   async updateProfile(userId: string, data: any) {
+    const allowedFields = [
+      'name', 'avatar', 'occupation', 'bio', 'timeDedication', 
+      'birthDecade', 'favoriteSong', 'curiousFact', 'biographyTitle', 
+      'destination', 'pets', 'whereIStudied', 'uselessSkill', 
+      'love', 'languages', 'interests'
+    ];
+
+    const sanitizedData = Object.keys(data)
+      .filter((key) => allowedFields.includes(key))
+      .reduce((obj, key) => {
+        obj[key] = data[key];
+        return obj;
+      }, {});
+
     return this.prisma.user.update({
       where: { id: userId },
-      data,
+      data: sanitizedData,
       select: {
         id: true,
         email: true,

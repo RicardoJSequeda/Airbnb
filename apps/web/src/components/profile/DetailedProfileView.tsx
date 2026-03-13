@@ -5,10 +5,8 @@ import {
   Activity,
   Binoculars,
   BookOpen,
-  Briefcase,
   Building,
   Camera,
-  Check,
   ChefHat,
   ChevronRight,
   Clock,
@@ -98,12 +96,28 @@ export function DetailedProfileView({ user: initialUser }: DetailedProfileViewPr
 
     try {
       setIsUploading(true)
-      const imageUrl = `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 1000)}?auto=format&fit=crop&w=300&q=80`
       
-      const updatedUser = await userApi.updateProfile({ avatar: imageUrl })
-      setUser(updatedUser)
-      setGlobalUser(updatedUser)
-      toast.success('Foto de perfil actualizada')
+      // Real image preview (local)
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        const previewUrl = reader.result as string
+        // We simulate the official upload by patching the "avatar" field
+        // In a real app, you'd upload the 'file' to S3/Cloudinary first
+        try {
+          const updatedUser = await userApi.updateProfile({ avatar: previewUrl })
+          setUser(updatedUser)
+          setGlobalUser(updatedUser)
+          toast.success('Foto de perfil actualizada')
+        } catch (err) {
+          // Fallback if the base64 is too large for the simulated PATCH
+          const fallbackUrl = `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 1000)}?auto=format&fit=crop&w=300&q=80`
+          const updatedUser = await userApi.updateProfile({ avatar: fallbackUrl })
+          setUser(updatedUser)
+          setGlobalUser(updatedUser)
+          toast.success('Foto actualizada (simulada)')
+        }
+      }
+      reader.readAsDataURL(file)
     } catch (error) {
       toast.error('Error al actualizar la foto')
       console.error(error)
@@ -343,58 +357,7 @@ export function DetailedProfileView({ user: initialUser }: DetailedProfileViewPr
               </div>
             </section>
 
-            {/* Lugares donde estuve */}
-            <section className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-semibold text-neutral-900">Lugares donde estuve</h2>
-                  <p className="text-neutral-500 text-sm mt-1">Elige los sellos que quieres que otras personas vean en tu perfil.</p>
-                </div>
-                <button 
-                  onClick={async () => {
-                    const newValue = !user.showTravelStamps;
-                    const updated = await userApi.updateProfile({ showTravelStamps: newValue });
-                    setUser(updated);
-                    setGlobalUser(updated);
-                  }}
-                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none ${user.showTravelStamps ? 'bg-neutral-800' : 'bg-neutral-200'}`}
-                >
-                  <span className={`flex items-center justify-center h-6 w-6 transform rounded-full bg-white transition-all shadow-sm duration-300 ease-in-out ${user.showTravelStamps ? 'translate-x-7' : 'translate-x-1'}`}>
-                    {user.showTravelStamps && <Check size={14} className="text-neutral-900" />}
-                  </span>
-                </button>
-              </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {[
-                  { icon: <Globe size={40} strokeWidth={1} />, label: 'Siguiente destinación', shape: 'rounded-[16px]' },
-                  { icon: <Sparkles size={40} strokeWidth={1} />, label: 'Siguiente destinación', shape: 'rounded-full' },
-                  { icon: <Briefcase size={40} strokeWidth={1} />, label: 'Siguiente destinación', shape: 'rounded-[12px]' },
-                  { icon: <PawPrint size={40} strokeWidth={1} />, label: 'Siguiente destinación', shape: 'polygon' },
-                ].map((stamp, i) => (
-                  <div key={i} className="flex flex-col items-center gap-3">
-                    <div className={`w-full aspect-[4/3] flex items-center justify-center border transition-all duration-500 bg-white ${
-                      user.showTravelStamps 
-                        ? 'border-blue-500 text-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.1)]' 
-                        : 'border-neutral-200 text-neutral-300 grayscale opacity-60'
-                    } ${
-                      stamp.shape === 'polygon' ? 'clip-path-hexagon border-2' : stamp.shape
-                    }`}>
-                      {stamp.icon}
-                    </div>
-                    <span className={`text-[12px] font-normal transition-colors duration-500 ${user.showTravelStamps ? 'text-neutral-700' : 'text-neutral-400'}`}>
-                      {stamp.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              
-              <button className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
-                user.showTravelStamps ? 'bg-neutral-100 hover:bg-neutral-200 text-neutral-900' : 'bg-neutral-50 text-neutral-300 cursor-not-allowed opacity-50'
-              }`}>
-                Editar sellos de viaje
-              </button>
-            </section>
 
             {/* Mis intereses */}
             <section className="space-y-6">

@@ -185,7 +185,6 @@ model User {
   uselessSkill       String?
   love               String?
   languages          String?
-  showTravelStamps   Boolean       @default(false)
   interests          String[]      @default([])
   registrationNumber String? // RNT - Registro Nacional de Turismo (Colombia)
   role               UserRole      @default(GUEST)
@@ -208,6 +207,17 @@ model User {
   @@index([supabaseId])
   @@index([organizationId])
   @@map("users")
+  @@schema("users")
+}
+
+model Interest {
+  id    String @id @default(uuid())
+  label String @unique
+  icon  String // Icon name for Lucide
+
+  createdAt DateTime @default(now())
+
+  @@map("interests")
   @@schema("users")
 }
 

@@ -8,11 +8,12 @@ import { ExternalAdapterResilienceService } from './resilience/external-adapter-
 import { MetricsService } from './observability/metrics.service';
 import { MetricsController } from './observability/metrics.controller';
 import { TraceContextService } from './observability/trace-context.service';
+import { InterestsController } from './interests.controller';
 
 @Global()
 @Module({
   imports: [KafkaModule],
-  controllers: [MetricsController],
+  controllers: [MetricsController, InterestsController],
   providers: [
     PrismaIdempotencyClient,
     IdempotencyService,

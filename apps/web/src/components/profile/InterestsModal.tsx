@@ -19,33 +19,34 @@ import {
   ShoppingBag, 
   Activity, 
   Binoculars,
-  Check
+  Sparkles
 } from 'lucide-react'
+import { apiClient } from '@/lib/api/client'
 
 interface Interest {
   id: string
   label: string
-  icon: React.ReactNode
+  icon: string
 }
 
-const ALL_INTERESTS: Interest[] = [
-  { id: 'nature', label: 'la naturaleza', icon: <Mountain size={20} /> },
-  { id: 'photography', label: 'Fotografía', icon: <Camera size={20} /> },
-  { id: 'music', label: 'Música en vivo', icon: <Music size={20} /> },
-  { id: 'coffee', label: 'Café', icon: <Coffee size={20} /> },
-  { id: 'museums', label: 'Museos', icon: <Landmark size={20} /> },
-  { id: 'gastronomy', label: 'Escenas gastronómicas', icon: <Soup size={20} /> },
-  { id: 'history', label: 'Historia', icon: <Globe size={20} /> },
-  { id: 'reading', label: 'Lectura', icon: <BookOpen size={20} /> },
-  { id: 'animals', label: 'Animales', icon: <PawPrint size={20} /> },
-  { id: 'architecture', label: 'Arquitectura', icon: <Building size={20} /> },
-  { id: 'walk', label: 'Caminata', icon: <Footprints size={20} /> },
-  { id: 'cooking', label: 'Cocina', icon: <ChefHat size={20} /> },
-  { id: 'wine', label: 'Vino', icon: <Wine size={20} /> },
-  { id: 'shopping', label: 'Compras', icon: <ShoppingBag size={20} /> },
-  { id: 'dance', label: 'Baile', icon: <Activity size={20} /> },
-  { id: 'culture', label: 'Cultura local', icon: <Binoculars size={20} /> },
-]
+const ICON_MAP: Record<string, React.ReactNode> = {
+  Mountain: <Mountain size={18} />,
+  Camera: <Camera size={18} />,
+  Music: <Music size={18} />,
+  Coffee: <Coffee size={18} />,
+  Landmark: <Landmark size={18} />,
+  Soup: <Soup size={18} />,
+  Globe: <Globe size={18} />,
+  BookOpen: <BookOpen size={18} />,
+  PawPrint: <PawPrint size={18} />,
+  Building: <Building size={18} />,
+  Footprints: <Footprints size={18} />,
+  ChefHat: <ChefHat size={18} />,
+  Wine: <Wine size={18} />,
+  ShoppingBag: <ShoppingBag size={18} />,
+  Activity: <Activity size={18} />,
+  Binoculars: <Binoculars size={18} />,
+}
 
 interface InterestsModalProps {
   isOpen: boolean
@@ -60,36 +61,42 @@ export function InterestsModal({
   onSave,
   initialInterests,
 }: InterestsModalProps) {
-  const [selectedIds, setSelectedIds] = React.useState<string[]>([])
+  const [interests, setInterests] = React.useState<Interest[]>([])
+  const [selectedLabels, setSelectedLabels] = React.useState<string[]>([])
   const [isSaving, setIsSaving] = React.useState(false)
+  const [isLoading, setIsLoading] = React.useState(true)
 
   React.useEffect(() => {
     if (isOpen) {
-      // Map initial labels back to IDs if needed, or assume labels are IDs for now
-      // In a real app we'd store IDs, but here the user provided labels in screens
-      const selected = ALL_INTERESTS
-        .filter(i => initialInterests.includes(i.label))
-        .map(i => i.id)
-      setSelectedIds(selected)
+      const fetchInterests = async () => {
+        try {
+          setIsLoading(true)
+          const response = await apiClient.get<Interest[]>('/interests')
+          setInterests(response.data)
+        } catch (error) {
+          console.error('Error fetching interests:', error)
+        } finally {
+          setIsLoading(false)
+        }
+      }
+      fetchInterests()
+      setSelectedLabels(initialInterests)
     }
   }, [initialInterests, isOpen])
 
   if (!isOpen) return null
 
-  const toggleInterest = (id: string) => {
-    setSelectedIds(prev => 
-      prev.includes(id) 
-        ? prev.filter(i => i !== id) 
-        : prev.length < 20 ? [...prev, id] : prev
+  const toggleInterest = (label: string) => {
+    setSelectedLabels(prev => 
+      prev.includes(label) 
+        ? prev.filter(i => i !== label) 
+        : prev.length < 20 ? [...prev, label] : prev
     )
   }
 
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      const selectedLabels = ALL_INTERESTS
-        .filter(i => selectedIds.includes(i.id))
-        .map(i => i.label)
       await onSave(selectedLabels)
       onClose()
     } catch (error) {
@@ -100,61 +107,67 @@ export function InterestsModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-[1px] animate-in fade-in duration-200">
       <div 
-        className="bg-white rounded-[24px] w-full max-w-[568px] flex flex-col max-h-[90vh] overflow-hidden shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-10 duration-400 ease-out"
+        className="bg-white rounded-[20px] w-full max-w-[420px] flex flex-col max-h-[80vh] overflow-hidden shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-2 duration-300 ease-out"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-4 flex items-center border-b border-transparent">
+        <div className="px-5 py-2.5 flex items-center border-b border-neutral-100">
           <button 
             onClick={onClose}
-            className="p-2 -ml-2 hover:bg-neutral-100 rounded-full transition-colors active:scale-90"
+            className="p-1 px-2 hover:bg-neutral-100 rounded-lg transition-colors active:scale-95"
           >
-            <X size={20} />
+            <X size={16} />
           </button>
         </div>
 
-        <div className="px-8 pt-2 pb-6 flex-1 overflow-y-auto">
-          <h2 className="text-[26px] font-semibold text-neutral-900 leading-tight mb-2 tracking-tight">
+        <div className="px-6 py-4 flex-1 overflow-y-auto scrollbar-hide">
+          <h2 className="text-[18px] font-bold text-neutral-900 leading-tight mb-1 tracking-tight">
             ¿Cuáles son tus intereses?
           </h2>
-          <p className="text-base text-neutral-500 mb-8 leading-relaxed">
-            Elige algunos intereses que disfrutes y que quieras mostrar en tu perfil.
+          <p className="text-[13px] text-neutral-500 mb-5 font-normal">
+            Elige intereses que quieras mostrar en tu perfil.
           </p>
 
-          <div className="flex flex-wrap gap-3">
-            {ALL_INTERESTS.map((interest) => {
-              const isSelected = selectedIds.includes(interest.id)
-              return (
-                <button
-                  key={interest.id}
-                  onClick={() => toggleInterest(interest.id)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-full border transition-all duration-200 ${
-                    isSelected 
-                      ? 'border-neutral-900 bg-neutral-50 ring-1 ring-neutral-900' 
-                      : 'border-neutral-300 hover:border-black'
-                  }`}
-                >
-                  <span className="text-neutral-700">{interest.icon}</span>
-                  <span className="text-base font-normal text-neutral-900">{interest.label}</span>
-                </button>
-              )
-            })}
-          </div>
-
-          <button className="mt-6 text-base font-semibold underline text-neutral-900 hover:text-black transition-colors">
-            Mostrar todo
-          </button>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-neutral-800" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {interests.map((interest) => {
+                const isSelected = selectedLabels.includes(interest.label)
+                return (
+                  <button
+                    key={interest.id}
+                    onClick={() => toggleInterest(interest.label)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 text-left ${
+                      isSelected 
+                        ? 'border-neutral-900 bg-neutral-50 ring-[0.5px] ring-neutral-900' 
+                        : 'border-neutral-200 hover:border-neutral-300'
+                    }`}
+                  >
+                    <span className="text-neutral-700 shrink-0">
+                      {ICON_MAP[interest.icon] || <Sparkles size={16} />}
+                    </span>
+                    <span className="text-[12px] font-medium text-neutral-900 truncate">
+                      {interest.label}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
-        <div className="px-8 py-5 border-t border-neutral-200 flex items-center justify-between bg-white">
-          <span className="text-[15px] font-semibold text-neutral-900">
-            {selectedIds.length}/20 seleccionados
+        <div className="px-6 py-3 border-t border-neutral-100 flex items-center justify-between bg-white">
+          <span className="text-[12px] font-medium text-neutral-400">
+            {selectedLabels.length}/20 seleccionados
           </span>
           <button
             onClick={handleSave}
-            disabled={isSaving}
-            className="bg-neutral-800 hover:bg-black text-white px-8 py-3 rounded-lg font-semibold transition-all active:scale-95 disabled:opacity-50 shadow-sm"
+            disabled={isSaving || isLoading}
+            className="bg-neutral-900 hover:bg-black text-white px-5 py-2 rounded-lg text-[13px] font-semibold transition-all active:scale-95 disabled:opacity-50"
           >
             {isSaving ? 'Guardando...' : 'Guarda'}
           </button>
