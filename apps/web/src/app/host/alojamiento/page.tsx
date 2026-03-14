@@ -277,7 +277,13 @@ export default function HostAlojamientoPage() {
     if (currentStep === 'discounts') return true
     if (currentStep === 'securityInfo') return true
     if (currentStep === 'finalDetails')
-      return Boolean(finalCountry && finalAddress && finalCity && finalRegion && isBusinessHost !== null)
+      return Boolean(
+        finalCountry.trim() &&
+          finalAddress.trim() &&
+          finalCity.trim() &&
+          finalRegion.trim() &&
+          isBusinessHost !== null
+      )
     return false
   })()
 
@@ -359,7 +365,9 @@ export default function HostAlojamientoPage() {
       router.push('/host/listings')
     } catch {
       // Si falla la creación, el borrador en localStorage permite reintentar más tarde.
-      setSubmitError('No pudimos crear tu alojamiento. Revisa los datos e inténtalo de nuevo.')
+      setSubmitError(
+        'No pudimos crear tu alojamiento. Verifica tu conexión o los datos e inténtalo de nuevo.'
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -373,7 +381,13 @@ export default function HostAlojamientoPage() {
       onBack={handleBack}
       onNext={handleNext}
       canGoNext={canGoNext}
+      nextLabel={isSubmitting ? 'Guardando...' : 'Siguiente'}
     >
+      {isSubmitting ? (
+        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          Estamos creando tu alojamiento. Esto puede tardar unos segundos...
+        </div>
+      ) : null}
       {submitError ? (
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {submitError}
