@@ -10,6 +10,7 @@ interface AccommodationFlowLayoutProps {
   onBack: () => void
   onNext: () => void
   canGoNext?: boolean
+  nextLabel?: string
 }
 
 export function AccommodationFlowLayout({
@@ -20,6 +21,7 @@ export function AccommodationFlowLayout({
   onBack,
   onNext,
   canGoNext = true,
+  nextLabel = 'Siguiente',
 }: AccommodationFlowLayoutProps) {
   const [end1, end2] = segmentBoundaries ?? [totalSteps, totalSteps]
   const segStarts = [0, end1, end2]
@@ -76,7 +78,7 @@ export function AccommodationFlowLayout({
                 : 'bg-[#E7E7E7] text-[#B0B0B0] cursor-not-allowed'
             }`}
           >
-            Siguiente
+            {nextLabel}
           </button>
         </div>
       </footer>

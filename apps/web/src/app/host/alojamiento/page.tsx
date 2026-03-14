@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AccommodationFlowLayout } from '@/components/host-accommodation/AccommodationFlowLayout'
 import { AmenitiesStep } from '@/components/host-accommodation/AmenitiesStep'
@@ -52,6 +52,7 @@ const STEPS: AccommodationStepKey[] = [
 /** [fin segmento 1, fin segmento 2]. Segmento 2 = standOut + amenities + photos + photoArrange + title + description + highlights + finishIntro + precios. */
 const SEGMENT_BOUNDARIES: [number, number] = [5, 17]
 const STORAGE_KEY = 'host-draft-accommodation'
+const STORAGE_DRAFT_ID_KEY = 'host-draft-accommodation-id'
 const DEFAULT_GUESTS = 4
 const DEFAULT_BEDS = 2
 const DEFAULT_BATHROOMS = 2
@@ -237,6 +238,12 @@ export default function HostAlojamientoPage() {
   const [isBusinessHost, setIsBusinessHost] = useState<boolean | null>(
     initialDraft.isBusinessHost ?? null
   )
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [draftPropertyId, setDraftPropertyId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    return localStorage.getItem(STORAGE_DRAFT_ID_KEY)
+  })
 
   const currentStep = STEPS[stepIndex]
 
@@ -254,55 +261,117 @@ export default function HostAlojamientoPage() {
     )
   }
 
-  const canGoNext = useMemo(() => {
-    if (currentStep === 'intro') return true
-    if (currentStep === 'propertyType') return Boolean(propertyTypeId)
-    if (currentStep === 'guestAccess') return Boolean(guestAccessId)
-    if (currentStep === 'location') return address.trim().length > 0
-    if (currentStep === 'basics') return true
-    if (currentStep === 'standOut') return true
-    if (currentStep === 'amenities') return true
-    if (currentStep === 'photos') return photoUrls.length >= 5
-    if (currentStep === 'photoArrange') return photoUrls.length >= 5
-    if (currentStep === 'title') return title.trim().length > 0
-    if (currentStep === 'description') return description.trim().length > 0
-    if (currentStep === 'highlights') return highlights.length > 0
-    if (currentStep === 'finishIntro') return true
-    if (currentStep === 'reservationPreferences') return reservationPreference !== null
-    if (currentStep === 'basePrice') return basePrice !== null
-    if (currentStep === 'weekendPrice') return weekendPremiumPercent !== null
-    if (currentStep === 'discounts') return true
-    if (currentStep === 'securityInfo') return true
-    if (currentStep === 'finalDetails')
-      return Boolean(finalCountry && finalAddress && finalCity && finalRegion && isBusinessHost !== null)
-    return false
+  const buildPropertyPayload = useCallback(() => {
+    const safeLatitude = latitude ?? 0
+    const safeLongitude = longitude ?? 0
+    const price = basePrice ?? 0
+
+    return {
+      title: (title.trim() || 'Nuevo alojamiento') as string,
+      description:
+        (description.trim() || 'Alojamiento creado desde el flujo de anfitrión.') as string,
+      price,
+      currency: 'COP',
+      maxGuests: guests,
+      bedrooms: beds,
+      bathrooms,
+      propertyType: propertyTypeId || 'casa',
+      address: (address.trim() || finalAddress || 'Pendiente') as string,
+      city: (finalCity || 'Ciudad') as string,
+      state: finalRegion || undefined,
+      country: finalCountry || 'Colombia',
+      zipCode: undefined,
+      latitude: safeLatitude,
+      longitude: safeLongitude,
+      amenities: [...amenityIds, ...outstandingAmenityIds],
+      images: photoUrls,
+    }
   }, [
-    currentStep,
+    title,
+    description,
+    basePrice,
+    guests,
+    beds,
+    bathrooms,
+    propertyTypeId,
+    address,
+    finalAddress,
+    finalCity,
+    finalRegion,
+    finalCountry,
+    latitude,
+    longitude,
+    amenityIds,
+    outstandingAmenityIds,
+    photoUrls,
+  ])
+
+  useEffect(() => {
+    if (draftPropertyId) return
+    let cancelled = false
+
+    propertiesApi
+      .createDraft()
+      .then((property) => {
+        if (cancelled || !property?.id) return
+        setDraftPropertyId(property.id)
+        localStorage.setItem(STORAGE_DRAFT_ID_KEY, property.id)
+      })
+      .catch(() => {
+        // Si falla, el flujo continúa con borrador local y se reintenta en siguiente render.
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [draftPropertyId])
+
+  useEffect(() => {
+    if (!draftPropertyId || isSubmitting) return
+
+    const payload = buildPropertyPayload()
+    const timeout = window.setTimeout(() => {
+      propertiesApi.saveDraft(draftPropertyId, payload).catch(() => {
+        // Si falla, mantenemos localStorage como respaldo.
+      })
+    }, 700)
+
+    return () => window.clearTimeout(timeout)
+  }, [
+    draftPropertyId,
+    isSubmitting,
+    buildPropertyPayload,
     propertyTypeId,
     guestAccessId,
     address,
-    photoUrls.length,
+    latitude,
+    longitude,
+    guests,
+    beds,
+    bathrooms,
+    amenityIds,
+    outstandingAmenityIds,
+    securityElementIds,
+    photoUrls,
     title,
     description,
-    highlights.length,
+    highlights,
+    reservationPreference,
+    basePrice,
+    weekendPremiumPercent,
+    discounts,
+    hasSecurityCameraOutside,
+    hasNoiseMonitor,
+    hasWeapons,
+    finalCountry,
+    finalAddress,
+    finalAddressExtra,
+    finalCity,
+    finalRegion,
+    isBusinessHost,
   ])
 
-  const handleBack = () => {
-    if (stepIndex === 0) {
-      router.push('/host/onboarding?type=alojamiento')
-      return
-    }
-    setStepIndex((prev) => prev - 1)
-  }
-
-  const handleNext = () => {
-    if (!canGoNext) return
-
-    if (stepIndex < STEPS.length - 1) {
-      setStepIndex((prev) => prev + 1)
-      return
-    }
-
+  useEffect(() => {
     const draft: AccommodationDraft = {
       propertyTypeId,
       guestAccessId,
@@ -333,38 +402,110 @@ export default function HostAlojamientoPage() {
       finalRegion,
       isBusinessHost,
     }
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(draft))
+  }, [
+    propertyTypeId,
+    guestAccessId,
+    address,
+    latitude,
+    longitude,
+    guests,
+    beds,
+    bathrooms,
+    amenityIds,
+    outstandingAmenityIds,
+    securityElementIds,
+    photoUrls.length,
+    title,
+    description,
+    highlights,
+    reservationPreference,
+    basePrice,
+    weekendPremiumPercent,
+    discounts,
+    hasSecurityCameraOutside,
+    hasNoiseMonitor,
+    hasWeapons,
+    finalCountry,
+    finalAddress,
+    finalAddressExtra,
+    finalCity,
+    finalRegion,
+    isBusinessHost,
+  ])
 
-    const safeLatitude = latitude ?? 0
-    const safeLongitude = longitude ?? 0
-    const price = basePrice ?? 0
+  const canGoNext = (() => {
+    if (isSubmitting) return false
+    if (currentStep === 'intro') return true
+    if (currentStep === 'propertyType') return Boolean(propertyTypeId)
+    if (currentStep === 'guestAccess') return Boolean(guestAccessId)
+    if (currentStep === 'location') return address.trim().length > 0
+    if (currentStep === 'basics') return true
+    if (currentStep === 'standOut') return true
+    if (currentStep === 'amenities') return true
+    if (currentStep === 'photos') return photoUrls.length >= 5
+    if (currentStep === 'photoArrange') return photoUrls.length >= 5
+    if (currentStep === 'title') return title.trim().length > 0
+    if (currentStep === 'description') return description.trim().length > 0
+    if (currentStep === 'highlights') return highlights.length > 0
+    if (currentStep === 'finishIntro') return true
+    if (currentStep === 'reservationPreferences') return reservationPreference !== null
+    if (currentStep === 'basePrice') return basePrice !== null
+    if (currentStep === 'weekendPrice') return weekendPremiumPercent !== null
+    if (currentStep === 'discounts') return true
+    if (currentStep === 'securityInfo') return true
+    if (currentStep === 'finalDetails')
+      return Boolean(
+        finalCountry.trim() &&
+          finalAddress.trim() &&
+          finalCity.trim() &&
+          finalRegion.trim() &&
+          isBusinessHost !== null
+      )
+    return false
+  })()
 
-    propertiesApi
-      .create({
-        title: draft.title || 'Nuevo alojamiento',
-        description: draft.description || 'Alojamiento creado desde el flujo de anfitrión.',
-        price,
-        currency: 'COP',
-        maxGuests: guests,
-        bedrooms: beds,
-        bathrooms,
-        propertyType: propertyTypeId || 'casa',
-        address: draft.address || finalAddress || '',
-        city: finalCity || 'Ciudad',
-        state: finalRegion || undefined,
-        country: finalCountry || 'Colombia',
-        zipCode: undefined,
-        latitude: safeLatitude,
-        longitude: safeLongitude,
-        amenities: [...amenityIds, ...outstandingAmenityIds],
-        images: photoUrls,
-      })
-      .catch(() => {
-        // Si falla la creación, el borrador en localStorage permite reintentar más tarde.
-      })
-      .finally(() => {
-        router.push('/host/listings')
-      })
+  const handleBack = () => {
+    if (stepIndex === 0) {
+      router.push('/host/onboarding?type=alojamiento')
+      return
+    }
+    setStepIndex((prev) => prev - 1)
+  }
+
+  const handleNext = async () => {
+    if (!canGoNext) return
+    setSubmitError(null)
+
+    if (stepIndex < STEPS.length - 1) {
+      setStepIndex((prev) => prev + 1)
+      return
+    }
+
+    const payload = buildPropertyPayload()
+
+    try {
+      setIsSubmitting(true)
+      if (draftPropertyId) {
+        await propertiesApi.saveDraft(draftPropertyId, payload)
+      } else {
+        const created = await propertiesApi.create(payload)
+        if (created?.id) {
+          localStorage.setItem(STORAGE_DRAFT_ID_KEY, created.id)
+        }
+      }
+      localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(STORAGE_DRAFT_ID_KEY)
+      router.push('/host/listings')
+    } catch {
+      // Si falla la creación, el borrador en localStorage permite reintentar más tarde.
+      setSubmitError(
+        'No pudimos crear tu alojamiento. Verifica tu conexión o los datos e inténtalo de nuevo.'
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -375,7 +516,18 @@ export default function HostAlojamientoPage() {
       onBack={handleBack}
       onNext={handleNext}
       canGoNext={canGoNext}
+      nextLabel={isSubmitting ? 'Guardando...' : 'Siguiente'}
     >
+      {isSubmitting ? (
+        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          Estamos creando tu alojamiento. Esto puede tardar unos segundos...
+        </div>
+      ) : null}
+      {submitError ? (
+        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {submitError}
+        </div>
+      ) : null}
       {currentStep === 'intro' ? <IntroStep /> : null}
       {currentStep === 'propertyType' ? (
         <PropertyTypeStep selectedTypeId={propertyTypeId} onSelect={setPropertyTypeId} />

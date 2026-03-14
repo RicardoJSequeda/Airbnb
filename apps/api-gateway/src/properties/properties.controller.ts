@@ -23,6 +23,14 @@ import type { AuthenticatedRequest } from '../common/types/authenticated-request
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
+  @Post('draft')
+  createDraft(@Request() req: AuthenticatedRequest) {
+    return this.propertiesService.createDraft(
+      req.user.userId,
+      req.user.organizationId ?? '',
+    );
+  }
+
   @Post()
   create(
     @Body() createPropertyDto: CreatePropertyDto,
@@ -40,12 +48,14 @@ export class PropertiesController {
     @Query('city') city?: string,
     @Query('country') country?: string,
     @Query('propertyType') propertyType?: string,
+    @Query('status') status?: 'DRAFT' | 'PUBLISHED',
     @Request() req?: AuthenticatedRequest,
   ) {
     return this.propertiesService.findAll({
       city,
       country,
       propertyType,
+      status,
       organizationId: req?.user?.organizationId ?? null,
     });
   }
@@ -53,6 +63,20 @@ export class PropertiesController {
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.propertiesService.findOne(id, req.user?.organizationId ?? null);
+  }
+
+  @Patch(':id/draft')
+  saveDraft(
+    @Param('id') id: string,
+    @Body() updatePropertyDto: UpdatePropertyDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.propertiesService.update(
+      id,
+      updatePropertyDto,
+      req.user.userId,
+      req.user.organizationId ?? undefined,
+    );
   }
 
   @Patch(':id')

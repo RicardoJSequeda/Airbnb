@@ -184,8 +184,9 @@ export class PrismaPropertiesRepository implements IPropertiesRepository {
   }
 
   async findMany(filters: ListPropertiesFilters): Promise<FormattedProperty[]> {
-    const where: Record<string, unknown> = { status: 'PUBLISHED' };
+    const where: Record<string, unknown> = {};
     if (filters.organizationId) where.organizationId = filters.organizationId;
+    if (filters.status) where.status = filters.status;
     if (filters.city) where.city = filters.city;
     if (filters.country) where.country = filters.country;
     if (filters.propertyType) where.propertyType = filters.propertyType;

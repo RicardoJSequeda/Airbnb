@@ -51,6 +51,7 @@ export interface ListPropertiesFilters {
   city?: string;
   country?: string;
   propertyType?: string;
+  status?: 'DRAFT' | 'PUBLISHED';
   organizationId?: string | null;
 }
 
