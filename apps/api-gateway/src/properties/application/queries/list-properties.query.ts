@@ -9,6 +9,10 @@ import { RedisService } from '../../../common/redis.service';
 
 const CACHE_TTL = 60;
 
+function orgVersionKey(orgId: string): string {
+  return `properties:list:version:${orgId}`;
+}
+
 @Injectable()
 export class ListPropertiesQuery {
   constructor(
@@ -21,7 +25,10 @@ export class ListPropertiesQuery {
     filters?: ListPropertiesFilters,
   ): Promise<Record<string, unknown>[]> {
     const orgId = filters?.organizationId ?? '';
-    const cacheKey = `properties:list:${orgId}:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.propertyType ?? ''}`;
+    const version = this.redis.isAvailable()
+      ? String((await this.redis.get(orgVersionKey(orgId))) ?? '0')
+      : '0';
+    const cacheKey = `properties:list:${orgId}:${version}:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.propertyType ?? ''}:${filters?.status ?? 'ALL'}`;
 
     if (this.redis.isAvailable()) {
       const cached = await this.redis.get(cacheKey);

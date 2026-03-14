@@ -9,6 +9,7 @@ import type { ListPublicPropertiesFilters } from '../../domain/ports/properties.
 import { RedisService } from '../../../common/redis.service';
 
 const CACHE_TTL = 60;
+const PUBLIC_VERSION_KEY = 'public:properties:version';
 
 @Injectable()
 export class ListPublicPropertiesQuery {
@@ -24,7 +25,10 @@ export class ListPublicPropertiesQuery {
     filters?: ListPublicPropertiesFilters,
   ): Promise<Record<string, unknown>[]> {
     try {
-      const cacheKey = `public:properties:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.propertyType ?? ''}`;
+      const version = this.redis.isAvailable()
+        ? String((await this.redis.get(PUBLIC_VERSION_KEY)) ?? '0')
+        : '0';
+      const cacheKey = `public:properties:${version}:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.propertyType ?? ''}`;
 
       if (this.redis.isAvailable()) {
         const cached = await this.redis.get(cacheKey);

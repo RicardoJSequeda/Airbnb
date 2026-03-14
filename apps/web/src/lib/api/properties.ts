@@ -7,6 +7,7 @@ export const publicPropertiesApi = {
     city?: string
     country?: string
     propertyType?: string
+    status?: 'DRAFT' | 'PUBLISHED'
   }) => {
     const response = await apiClient.get<Property[]>('/public/properties', { params })
     return response.data
@@ -26,6 +27,7 @@ export const propertiesApi = {
     city?: string
     country?: string
     propertyType?: string
+    status?: 'DRAFT' | 'PUBLISHED'
   }) => {
     const response = await apiClient.get<Property[]>('/dashboard/properties', { params })
     return response.data
@@ -36,8 +38,21 @@ export const propertiesApi = {
     return response.data
   },
 
+
+  createDraft: async () => {
+    const response = await apiClient.post<Property>('/dashboard/properties/draft')
+    return response.data
+  },
+
+  saveDraft: async (id: string, data: Partial<Property>) => {
+    const response = await apiClient.patch<Property>(`/dashboard/properties/${id}/draft`, data)
+    return response.data
+  },
+
   create: async (data: Partial<Property>) => {
-    const response = await apiClient.post<Property>('/dashboard/properties', data)
+    const response = await apiClient.post<Property>('/dashboard/properties', data, {
+      timeout: 15000,
+    })
     return response.data
   },
 
@@ -55,8 +70,8 @@ export const propertiesApi = {
     return response.data
   },
 
-  getMyProperties: async () => {
-    const response = await apiClient.get<Property[]>('/dashboard/properties')
+  getMyProperties: async (params?: { status?: 'DRAFT' | 'PUBLISHED' }) => {
+    const response = await apiClient.get<Property[]>('/dashboard/properties', { params })
     return response.data
   },
 }
