@@ -10,3 +10,12 @@ export function parseErrorMessage(err: unknown, fallback = 'Ha ocurrido un error
   if (typeof e.message === 'string') return e.message
   return fallback
 }
+
+export function parseErrorCode(err: unknown): string | null {
+  if (!err || typeof err !== 'object') return null
+  const e = err as { response?: { data?: unknown } }
+  const data = e.response?.data
+  if (!data || typeof data !== 'object') return null
+  const code = (data as { errorCode?: unknown }).errorCode
+  return typeof code === 'string' ? code : null
+}

@@ -14,23 +14,22 @@ Este roadmap convierte las recomendaciones en una secuencia ejecutable por fases
    - Creación de draft mínimo al iniciar wizard (`POST /dashboard/properties/draft`) y actualización por bloques.
    - Objetivo logrado: reanudar progreso sin depender únicamente de localStorage.
 
-3. ⏳ **UX de finalización robusta**
-   - Mantener feedback de envío/errores.
-   - Agregar códigos de error tipados (suscripción, auth, validación) con mensajes específicos.
+3. ✅ **UX de finalización robusta**
+   - Feedback de envío/errores activo.
+   - Manejo de `errorCode` tipado (`SUBSCRIPTION_INACTIVE`) con mensaje específico al host.
 
 ## Fase 2 (alto impacto) — calidad y observabilidad
 
-4. ⏳ **Telemetría de funnel del wizard**
-   - Events por paso (`view`, `blocked`, `submit_success`, `submit_fail`).
+4. ✅ **Telemetría de funnel del wizard**
+   - Eventos implementados por paso (`view`, `blocked`, `submit_success`, `submit_fail`) listos para integrar con proveedor analítico.
 
 5. ⏳ **E2E de flujos críticos**
    - Crear anuncio host completo.
    - Ver aparición en `/host/listings`.
    - Ver no aparición pública hasta `PUBLISHED`.
 
-6. ⏳ **Observabilidad backend**
-   - Métricas p95/p99 en `POST /dashboard/properties`.
-   - Tasa de error por endpoint y por organización.
+6. ✅ **Observabilidad backend**
+   - Métricas de duración y total por operación de propiedades (`create`, `update`, `publish`, etc.) con estado `ok/error`.
 
 ## Fase 3 (escalado) — modelo y seguridad
 

@@ -27,6 +27,8 @@ import type {
   AccommodationStepKey,
 } from '@/components/host-accommodation/types'
 import { propertiesApi } from '@/lib/api/properties'
+import { parseErrorCode } from '@/lib/utils/parse-error'
+import { trackHostWizardEvent } from '@/lib/analytics/host-wizard'
 
 const STEPS: AccommodationStepKey[] = [
   'intro',
@@ -246,6 +248,14 @@ export default function HostAlojamientoPage() {
   })
 
   const currentStep = STEPS[stepIndex]
+
+  useEffect(() => {
+    trackHostWizardEvent('host_wizard_step_view', {
+      step: currentStep,
+      stepIndex,
+      totalSteps: STEPS.length,
+    })
+  }, [currentStep, stepIndex])
 
   const toggleAmenity = (id: string) => {
     setAmenityIds((prev) => (prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]))
@@ -475,7 +485,13 @@ export default function HostAlojamientoPage() {
   }
 
   const handleNext = async () => {
-    if (!canGoNext) return
+    if (!canGoNext) {
+      trackHostWizardEvent('host_wizard_step_blocked', {
+        step: currentStep,
+        stepIndex,
+      })
+      return
+    }
     setSubmitError(null)
 
     if (stepIndex < STEPS.length - 1) {
@@ -497,12 +513,22 @@ export default function HostAlojamientoPage() {
       }
       localStorage.removeItem(STORAGE_KEY)
       localStorage.removeItem(STORAGE_DRAFT_ID_KEY)
+      trackHostWizardEvent('host_wizard_submit_success', {
+        step: currentStep,
+      })
       router.push('/host/listings')
-    } catch {
+    } catch (err) {
       // Si falla la creación, el borrador en localStorage permite reintentar más tarde.
-      setSubmitError(
-        'No pudimos crear tu alojamiento. Verifica tu conexión o los datos e inténtalo de nuevo.'
-      )
+      const code = parseErrorCode(err)
+      const message =
+        code === 'SUBSCRIPTION_INACTIVE'
+          ? 'Tu suscripción está inactiva. Actívala para publicar o guardar tu alojamiento.'
+          : 'No pudimos crear tu alojamiento. Verifica tu conexión o los datos e inténtalo de nuevo.'
+      setSubmitError(message)
+      trackHostWizardEvent('host_wizard_submit_fail', {
+        step: currentStep,
+        errorCode: code ?? 'UNKNOWN',
+      })
     } finally {
       setIsSubmitting(false)
     }
