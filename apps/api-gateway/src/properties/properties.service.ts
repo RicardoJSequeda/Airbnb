@@ -17,6 +17,7 @@ import {
 } from './application/errors';
 import type { CreatePropertyDto } from './dto/create-property.dto';
 import type { UpdatePropertyDto } from './dto/update-property.dto';
+import { RedisService } from '../common/redis.service';
 
 @Injectable()
 export class PropertiesService {
@@ -29,6 +30,7 @@ export class PropertiesService {
     private readonly getPropertyQuery: GetPropertyQuery,
     private readonly listPublicPropertiesQuery: ListPublicPropertiesQuery,
     private readonly getPublicPropertyQuery: GetPublicPropertyQuery,
+    private readonly redis: RedisService,
   ) {}
 
   async create(
@@ -42,6 +44,7 @@ export class PropertiesService {
         hostId,
         organizationId,
       });
+      await this.bumpOrgPropertiesVersion(organizationId);
       return property;
     } catch (err) {
       this.mapError(err);
@@ -78,39 +81,35 @@ export class PropertiesService {
         userId,
         organizationId,
       });
+      await this.bumpOrgPropertiesVersion(organizationId ?? undefined);
       return property;
     } catch (err) {
       this.mapError(err);
     }
   }
 
-  async remove(
-    id: string,
-    userId: string,
-    organizationId?: string | null,
-  ) {
+  async remove(id: string, userId: string, organizationId?: string | null) {
     try {
       await this.deletePropertyUseCase.execute({
         id,
         userId,
         organizationId,
       });
+      await this.bumpOrgPropertiesVersion(organizationId ?? undefined);
     } catch (err) {
       this.mapError(err);
     }
   }
 
-  async publish(
-    id: string,
-    userId: string,
-    organizationId?: string | null,
-  ) {
+  async publish(id: string, userId: string, organizationId?: string | null) {
     try {
       const { property } = await this.publishPropertyUseCase.execute({
         id,
         userId,
         organizationId,
       });
+      await this.bumpOrgPropertiesVersion(organizationId ?? undefined);
+      await this.bumpPublicPropertiesVersion();
       return property;
     } catch (err) {
       this.mapError(err);
@@ -129,6 +128,18 @@ export class PropertiesService {
     return this.getPublicPropertyQuery.execute(id);
   }
 
+  private async bumpOrgPropertiesVersion(
+    organizationId?: string,
+  ): Promise<void> {
+    if (!organizationId || !this.redis.isAvailable()) return;
+    await this.redis.incr(`properties:list:version:${organizationId}`);
+  }
+
+  private async bumpPublicPropertiesVersion(): Promise<void> {
+    if (!this.redis.isAvailable()) return;
+    await this.redis.incr('public:properties:version');
+  }
+
   private mapError(err: unknown): never {
     if (err instanceof ApplicationNotFoundError) {
       throw new NotFoundException(err.message);
@@ -140,7 +151,9 @@ export class PropertiesService {
       throw err;
     }
     throw new Error(
-      typeof err === 'string' ? err : 'Unexpected error while handling property',
+      typeof err === 'string'
+        ? err
+        : 'Unexpected error while handling property',
     );
   }
 }
