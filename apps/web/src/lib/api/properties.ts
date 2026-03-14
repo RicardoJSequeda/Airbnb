@@ -37,7 +37,9 @@ export const propertiesApi = {
   },
 
   create: async (data: Partial<Property>) => {
-    const response = await apiClient.post<Property>('/dashboard/properties', data)
+    const response = await apiClient.post<Property>('/dashboard/properties', data, {
+      timeout: 15000,
+    })
     return response.data
   },
 
