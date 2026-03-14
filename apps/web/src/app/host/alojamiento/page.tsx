@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AccommodationFlowLayout } from '@/components/host-accommodation/AccommodationFlowLayout'
 import { AmenitiesStep } from '@/components/host-accommodation/AmenitiesStep'
@@ -237,6 +237,8 @@ export default function HostAlojamientoPage() {
   const [isBusinessHost, setIsBusinessHost] = useState<boolean | null>(
     initialDraft.isBusinessHost ?? null
   )
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const currentStep = STEPS[stepIndex]
 
@@ -254,7 +256,8 @@ export default function HostAlojamientoPage() {
     )
   }
 
-  const canGoNext = useMemo(() => {
+  const canGoNext = (() => {
+    if (isSubmitting) return false
     if (currentStep === 'intro') return true
     if (currentStep === 'propertyType') return Boolean(propertyTypeId)
     if (currentStep === 'guestAccess') return Boolean(guestAccessId)
@@ -276,16 +279,7 @@ export default function HostAlojamientoPage() {
     if (currentStep === 'finalDetails')
       return Boolean(finalCountry && finalAddress && finalCity && finalRegion && isBusinessHost !== null)
     return false
-  }, [
-    currentStep,
-    propertyTypeId,
-    guestAccessId,
-    address,
-    photoUrls.length,
-    title,
-    description,
-    highlights.length,
-  ])
+  })()
 
   const handleBack = () => {
     if (stepIndex === 0) {
@@ -295,8 +289,9 @@ export default function HostAlojamientoPage() {
     setStepIndex((prev) => prev - 1)
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!canGoNext) return
+    setSubmitError(null)
 
     if (stepIndex < STEPS.length - 1) {
       setStepIndex((prev) => prev + 1)
@@ -339,8 +334,9 @@ export default function HostAlojamientoPage() {
     const safeLongitude = longitude ?? 0
     const price = basePrice ?? 0
 
-    propertiesApi
-      .create({
+    try {
+      setIsSubmitting(true)
+      await propertiesApi.create({
         title: draft.title || 'Nuevo alojamiento',
         description: draft.description || 'Alojamiento creado desde el flujo de anfitrión.',
         price,
@@ -359,12 +355,14 @@ export default function HostAlojamientoPage() {
         amenities: [...amenityIds, ...outstandingAmenityIds],
         images: photoUrls,
       })
-      .catch(() => {
-        // Si falla la creación, el borrador en localStorage permite reintentar más tarde.
-      })
-      .finally(() => {
-        router.push('/host/listings')
-      })
+      localStorage.removeItem(STORAGE_KEY)
+      router.push('/host/listings')
+    } catch {
+      // Si falla la creación, el borrador en localStorage permite reintentar más tarde.
+      setSubmitError('No pudimos crear tu alojamiento. Revisa los datos e inténtalo de nuevo.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -376,6 +374,11 @@ export default function HostAlojamientoPage() {
       onNext={handleNext}
       canGoNext={canGoNext}
     >
+      {submitError ? (
+        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {submitError}
+        </div>
+      ) : null}
       {currentStep === 'intro' ? <IntroStep /> : null}
       {currentStep === 'propertyType' ? (
         <PropertyTypeStep selectedTypeId={propertyTypeId} onSelect={setPropertyTypeId} />
