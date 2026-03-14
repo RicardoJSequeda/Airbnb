@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AccommodationFlowLayout } from '@/components/host-accommodation/AccommodationFlowLayout'
 import { AmenitiesStep } from '@/components/host-accommodation/AmenitiesStep'
@@ -256,6 +256,70 @@ export default function HostAlojamientoPage() {
     )
   }
 
+  useEffect(() => {
+    const draft: AccommodationDraft = {
+      propertyTypeId,
+      guestAccessId,
+      address: address.trim() || null,
+      latitude,
+      longitude,
+      guests,
+      beds,
+      bathrooms,
+      amenityIds,
+      outstandingAmenityIds,
+      securityElementIds,
+      photoCount: photoUrls.length,
+      title: title.trim() || null,
+      description: description.trim() || null,
+      highlights,
+      reservationPreference,
+      basePrice,
+      weekendPremiumPercent,
+      discounts,
+      hasSecurityCameraOutside,
+      hasNoiseMonitor,
+      hasWeapons,
+      finalCountry,
+      finalAddress,
+      finalAddressExtra,
+      finalCity,
+      finalRegion,
+      isBusinessHost,
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(draft))
+  }, [
+    propertyTypeId,
+    guestAccessId,
+    address,
+    latitude,
+    longitude,
+    guests,
+    beds,
+    bathrooms,
+    amenityIds,
+    outstandingAmenityIds,
+    securityElementIds,
+    photoUrls.length,
+    title,
+    description,
+    highlights,
+    reservationPreference,
+    basePrice,
+    weekendPremiumPercent,
+    discounts,
+    hasSecurityCameraOutside,
+    hasNoiseMonitor,
+    hasWeapons,
+    finalCountry,
+    finalAddress,
+    finalAddressExtra,
+    finalCity,
+    finalRegion,
+    isBusinessHost,
+  ])
+
   const canGoNext = (() => {
     if (isSubmitting) return false
     if (currentStep === 'intro') return true
@@ -334,8 +398,6 @@ export default function HostAlojamientoPage() {
       finalRegion,
       isBusinessHost,
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(draft))
-
     const safeLatitude = latitude ?? 0
     const safeLongitude = longitude ?? 0
     const price = basePrice ?? 0
