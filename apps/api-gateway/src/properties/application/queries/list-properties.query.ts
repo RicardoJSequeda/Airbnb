@@ -28,7 +28,7 @@ export class ListPropertiesQuery {
     const version = this.redis.isAvailable()
       ? String((await this.redis.get(orgVersionKey(orgId))) ?? '0')
       : '0';
-    const cacheKey = `properties:list:${orgId}:${version}:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.propertyType ?? ''}`;
+    const cacheKey = `properties:list:${orgId}:${version}:${filters?.city ?? ''}:${filters?.country ?? ''}:${filters?.propertyType ?? ''}:${filters?.status ?? 'ALL'}`;
 
     if (this.redis.isAvailable()) {
       const cached = await this.redis.get(cacheKey);

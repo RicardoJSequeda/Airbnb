@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AccommodationFlowLayout } from '@/components/host-accommodation/AccommodationFlowLayout'
 import { AmenitiesStep } from '@/components/host-accommodation/AmenitiesStep'
@@ -52,6 +52,7 @@ const STEPS: AccommodationStepKey[] = [
 /** [fin segmento 1, fin segmento 2]. Segmento 2 = standOut + amenities + photos + photoArrange + title + description + highlights + finishIntro + precios. */
 const SEGMENT_BOUNDARIES: [number, number] = [5, 17]
 const STORAGE_KEY = 'host-draft-accommodation'
+const STORAGE_DRAFT_ID_KEY = 'host-draft-accommodation-id'
 const DEFAULT_GUESTS = 4
 const DEFAULT_BEDS = 2
 const DEFAULT_BATHROOMS = 2
@@ -239,6 +240,10 @@ export default function HostAlojamientoPage() {
   )
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [draftPropertyId, setDraftPropertyId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    return localStorage.getItem(STORAGE_DRAFT_ID_KEY)
+  })
 
   const currentStep = STEPS[stepIndex]
 
@@ -255,6 +260,116 @@ export default function HostAlojamientoPage() {
       prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
     )
   }
+
+  const buildPropertyPayload = useCallback(() => {
+    const safeLatitude = latitude ?? 0
+    const safeLongitude = longitude ?? 0
+    const price = basePrice ?? 0
+
+    return {
+      title: (title.trim() || 'Nuevo alojamiento') as string,
+      description:
+        (description.trim() || 'Alojamiento creado desde el flujo de anfitrión.') as string,
+      price,
+      currency: 'COP',
+      maxGuests: guests,
+      bedrooms: beds,
+      bathrooms,
+      propertyType: propertyTypeId || 'casa',
+      address: (address.trim() || finalAddress || 'Pendiente') as string,
+      city: (finalCity || 'Ciudad') as string,
+      state: finalRegion || undefined,
+      country: finalCountry || 'Colombia',
+      zipCode: undefined,
+      latitude: safeLatitude,
+      longitude: safeLongitude,
+      amenities: [...amenityIds, ...outstandingAmenityIds],
+      images: photoUrls,
+    }
+  }, [
+    title,
+    description,
+    basePrice,
+    guests,
+    beds,
+    bathrooms,
+    propertyTypeId,
+    address,
+    finalAddress,
+    finalCity,
+    finalRegion,
+    finalCountry,
+    latitude,
+    longitude,
+    amenityIds,
+    outstandingAmenityIds,
+    photoUrls,
+  ])
+
+  useEffect(() => {
+    if (draftPropertyId) return
+    let cancelled = false
+
+    propertiesApi
+      .createDraft()
+      .then((property) => {
+        if (cancelled || !property?.id) return
+        setDraftPropertyId(property.id)
+        localStorage.setItem(STORAGE_DRAFT_ID_KEY, property.id)
+      })
+      .catch(() => {
+        // Si falla, el flujo continúa con borrador local y se reintenta en siguiente render.
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [draftPropertyId])
+
+  useEffect(() => {
+    if (!draftPropertyId || isSubmitting) return
+
+    const payload = buildPropertyPayload()
+    const timeout = window.setTimeout(() => {
+      propertiesApi.saveDraft(draftPropertyId, payload).catch(() => {
+        // Si falla, mantenemos localStorage como respaldo.
+      })
+    }, 700)
+
+    return () => window.clearTimeout(timeout)
+  }, [
+    draftPropertyId,
+    isSubmitting,
+    buildPropertyPayload,
+    propertyTypeId,
+    guestAccessId,
+    address,
+    latitude,
+    longitude,
+    guests,
+    beds,
+    bathrooms,
+    amenityIds,
+    outstandingAmenityIds,
+    securityElementIds,
+    photoUrls,
+    title,
+    description,
+    highlights,
+    reservationPreference,
+    basePrice,
+    weekendPremiumPercent,
+    discounts,
+    hasSecurityCameraOutside,
+    hasNoiseMonitor,
+    hasWeapons,
+    finalCountry,
+    finalAddress,
+    finalAddressExtra,
+    finalCity,
+    finalRegion,
+    isBusinessHost,
+  ])
 
   useEffect(() => {
     const draft: AccommodationDraft = {
@@ -368,62 +483,20 @@ export default function HostAlojamientoPage() {
       return
     }
 
-    const draft: AccommodationDraft = {
-      propertyTypeId,
-      guestAccessId,
-      address: address.trim() || null,
-      latitude,
-      longitude,
-      guests,
-      beds,
-      bathrooms,
-      amenityIds,
-      outstandingAmenityIds,
-      securityElementIds,
-      photoCount: photoUrls.length,
-      title: title.trim() || null,
-      description: description.trim() || null,
-      highlights,
-      reservationPreference,
-      basePrice,
-      weekendPremiumPercent,
-      discounts,
-      hasSecurityCameraOutside,
-      hasNoiseMonitor,
-      hasWeapons,
-      finalCountry,
-      finalAddress,
-      finalAddressExtra,
-      finalCity,
-      finalRegion,
-      isBusinessHost,
-    }
-    const safeLatitude = latitude ?? 0
-    const safeLongitude = longitude ?? 0
-    const price = basePrice ?? 0
+    const payload = buildPropertyPayload()
 
     try {
       setIsSubmitting(true)
-      await propertiesApi.create({
-        title: draft.title || 'Nuevo alojamiento',
-        description: draft.description || 'Alojamiento creado desde el flujo de anfitrión.',
-        price,
-        currency: 'COP',
-        maxGuests: guests,
-        bedrooms: beds,
-        bathrooms,
-        propertyType: propertyTypeId || 'casa',
-        address: draft.address || finalAddress || '',
-        city: finalCity || 'Ciudad',
-        state: finalRegion || undefined,
-        country: finalCountry || 'Colombia',
-        zipCode: undefined,
-        latitude: safeLatitude,
-        longitude: safeLongitude,
-        amenities: [...amenityIds, ...outstandingAmenityIds],
-        images: photoUrls,
-      })
+      if (draftPropertyId) {
+        await propertiesApi.saveDraft(draftPropertyId, payload)
+      } else {
+        const created = await propertiesApi.create(payload)
+        if (created?.id) {
+          localStorage.setItem(STORAGE_DRAFT_ID_KEY, created.id)
+        }
+      }
       localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(STORAGE_DRAFT_ID_KEY)
       router.push('/host/listings')
     } catch {
       // Si falla la creación, el borrador en localStorage permite reintentar más tarde.

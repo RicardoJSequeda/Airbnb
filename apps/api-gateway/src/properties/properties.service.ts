@@ -33,6 +33,28 @@ export class PropertiesService {
     private readonly redis: RedisService,
   ) {}
 
+  async createDraft(hostId: string, organizationId: string) {
+    const dto: CreatePropertyDto = {
+      title: 'Borrador de alojamiento',
+      description: 'Borrador en progreso',
+      price: 0,
+      currency: 'COP',
+      maxGuests: 1,
+      bedrooms: 1,
+      bathrooms: 1,
+      propertyType: 'casa',
+      address: 'Pendiente',
+      city: 'Pendiente',
+      country: 'Colombia',
+      latitude: 0,
+      longitude: 0,
+      amenities: [],
+      images: [],
+    };
+
+    return this.create(dto, hostId, organizationId);
+  }
+
   async create(
     createPropertyDto: CreatePropertyDto,
     hostId: string,
@@ -55,6 +77,7 @@ export class PropertiesService {
     city?: string;
     country?: string;
     propertyType?: string;
+    status?: 'DRAFT' | 'PUBLISHED';
     organizationId?: string | null;
   }) {
     return this.listPropertiesQuery.execute(filters);
